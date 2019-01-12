@@ -1,0 +1,16 @@
+#rfp input.form-control {
+    border: none;
+    border-bottom: 2px solid #555;
+    border-radius: inherit;
+    box-shadow: none;
+}
+#rfp .checkbox {
+    float: right;
+}
+#rfp [type="checkbox"]{}
+#rfp .nav [data-toggle="tab"] {
+    border-radius: 0;
+    padding: 5px 10px;
+}
+#rfp .nav .active [data-toggle="tab"]{}
+#rfp [type="checkbox"]:checked{}
