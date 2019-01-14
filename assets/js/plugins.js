@@ -57,8 +57,6 @@
         "wv"
     ];
 
-    
-
     w.getUrlParam = function(name){
         var url = new URL(w.location.href);
         return url.searchParams.get(name);
@@ -169,7 +167,7 @@
         $('body').append(self.frame);
         return self.el;
     }
-})(window,jQuery)
+})(window,jQuery);
 
 
 /*
@@ -1180,7 +1178,6 @@
         constructor(){
             var self = this;
             if (typeof(Storage) !== "undefined") {
-                console.log('Web Storage Helper Initialize')
                 $(document).on('ready',function(){
                     self.init();
                 });
@@ -1281,6 +1278,18 @@
 })(window,jQuery);
 
 
+/*
+    Contact Form
+    Description: A contact form plugin that is usable anywhere in the page
+    Initilization: 
+        by data: <div data-provide="cf"></div>
+        by function: $('#contact').contactForm();
+    Options:
+        debug: false,
+        redirect: true,
+        beforeSubmit: function(data)
+        afterSubmit: function(url)
+*/
 (function(w,$){
 
     class remote {
@@ -1360,7 +1369,7 @@
             var self = this;
 
             if(this.isElementEmpty()){
-                this.element.html($(this.template()))
+                this.element.html($(this.template()));
             }
 
             this.$$('button').on('click',function(){
@@ -1434,7 +1443,7 @@
         }
 
         isElementEmpty(){
-            return !$.trim(this.element.html())
+            return !$.trim(this.element.html());
         }
 
         validate(){
@@ -1508,19 +1517,19 @@
         /* check important fields */
         if($.trim($self.html()) ? true : false ){
             if( !hasField('#name,.name,[name="name"]') ){
-                console.log('"name" field class or ID not set!')
+                console.log('"name" field class or ID not set!');
                 return false;
             }
             if( !hasField('#phone,.phone,[name="phone"]') ){
-                console.log('"phone" field class or ID not set!')
+                console.log('"phone" field class or ID not set!');
                 return false;
             }
             if( !hasField('#email,.email,[name="email"]') ){
-                console.log('"email" field class or ID not set!')
+                console.log('"email" field class or ID not set!');
                 return false;
             }
             if( !hasField('#message,.message,[name="message"]')  ){
-                console.log('"message" field class or ID not set!')
+                console.log('"message" field class or ID not set!');
                 return false;
             }
         }
