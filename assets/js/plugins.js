@@ -1281,14 +1281,10 @@
 })(window,jQuery);
 
 
-/*
-    Contact Form
-    Description: A contact form plugin that is usable anywhere in the page
-*/
 (function(w,$){
 
     class remote {
-        constructor(){
+        constructor(boolRedirect){
             this.formUrl = "/contactus.aspx";
             this.path    = null;
             
@@ -1298,6 +1294,7 @@
 
             this.iframe.on("load", function() {
                 self.url = self.iframe.contents().get(0).location.href;
+                if(boolRedirect)
                 if(self.url.indexOf('/userpage.aspx')>0){
                     window.location.href = self.url;
                 }
@@ -1323,8 +1320,19 @@
         }
 
         send(){
+            var self = this;
             this.el('#content_contact1_btnSubmit_B').click();
-            return this;
+
+            return new Promise(function(resolve, reject) {
+                self.iframe.on("load", function() {
+                    if (self.url.indexOf('/userpage.aspx')>0) {
+                        resolve(self.url);
+                    }
+                    else {
+                        reject(Error("It broke"));
+                    }
+                });
+            });
         }
 
     }
@@ -1332,15 +1340,18 @@
     class contactForm {
         constructor(element,options){
             this.element = element;
-            this.remote = new remote;
             this.settings = {
-                debug: true
+                debug: false,
+                redirect: true,
+                beforeSubmit: function(){},
+                afterSubmit: function(){}
             };
-            // merge settings
-            if (options) {
-                $.extend(settings, options);
-            }
 
+            this.remote = new remote(this.settings.redirect);
+
+            if (options) {
+                $.extend(this.settings, options);
+            }
 
             this.init();
         }
@@ -1355,6 +1366,7 @@
             this.$$('button').on('click',function(){
                 self.onSubmit();
             });
+
             this.debug();
         }
 
@@ -1461,9 +1473,16 @@
         }
 
         send(){
+            this.settings.beforeSubmit(this.data);
+
             if(this.validate()){
                 this.$$('input,button,textarea').prop('disabled',true)
-                this.remote.data(this.data).send()
+                this.remote
+                .data(this.data)
+                .send()
+                .then(function(res){
+                    this.settings.afterSubmit(res);
+                });
             }
         }
 
@@ -1478,12 +1497,42 @@
     }
 
     $.fn.contactForm = function(options){
-        if(typeof $(this).data('contactForm') !== 'undefined')
+        if(typeof $(this).data('contactForm') !== 'undefined' || !$(this).length)
         return false;
+
+        var $self = $(this);
+        var hasField = function(target){
+            return $self.find(target).length;
+        }
+
+        /* check important fields */
+        if($.trim($self.html()) ? true : false ){
+            if( !hasField('#name,.name,[name="name"]') ){
+                console.log('"name" field class or ID not set!')
+                return false;
+            }
+            if( !hasField('#phone,.phone,[name="phone"]') ){
+                console.log('"phone" field class or ID not set!')
+                return false;
+            }
+            if( !hasField('#email,.email,[name="email"]') ){
+                console.log('"email" field class or ID not set!')
+                return false;
+            }
+            if( !hasField('#message,.message,[name="message"]')  ){
+                console.log('"message" field class or ID not set!')
+                return false;
+            }
+        }
+        
 
         var cf = new contactForm($(this),options);
         $(this).data('contactForm',cf);
         return $(this);
     }
+
+    $(document).ready(function(){
+        $('[data-provide="contactForm"],[data-provide="cf"]').contactForm();
+    });
 
 })(window,jQuery)
