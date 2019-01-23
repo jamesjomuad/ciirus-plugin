@@ -614,6 +614,7 @@
 })(jQuery);
 
 
+
 /*
 *   Blog Helper
 */
@@ -804,26 +805,143 @@
     /*
     *   Category
     */
-    var Category = function(el,option){
-        var $list = $($('#content_ASPxTreeList1_D a[href*="/blog/category"]').get().reverse());
-        $list.each(function(){
-            var cat = el.clone();
-            var href = $(this).attr('href');
-            var text = $(this).text();
-            var count = $(this)[0].nextSibling.nodeValue.replace(/[()]/g, '').replace(/\s/g,'') ;
-            cat.find('a').attr('href',href);
-            cat.find('a').contents()[0].nodeValue = text;
-            cat.find('a .badge').text(count);
-            cat.attr('data-provide','category')
-            cat.insertAfter(el);
-        });
-        el.remove();
-        return this;
+    class Category{
+        constructor(el,options){
+            this.target = el;
+            this.wrap = el.parent('ul');
+            this.settings = {
+                tree: false,
+                tmplt: $('<li> <a href="#">text</a> <span class="badge count">0</span> <button type="button" class="btn btn-default"><i class="fa fa-angle-right"></i></button></li>'),
+                childTmplt: $('<li><a href="#">text</a></li>'),
+                childWrap: $('<ul class="collapse in">')
+            };
+            if (options) {
+                $.extend(this.settings, options);
+            }
+            if(el.length)
+            return this.init();
+        }
+    
+        init(){
+            var self    = this;
+            var tmp     = [];
+            this.tmplt  = this.settings.tmplt;
+            this.create();
+            this.target.remove();
+    
+            $('#content_ASPxTreeList1_U').on('DOMSubtreeModified',function(){
+                /* prevents multiple call */
+                tmp.push($(this).find('tbody').length)
+                var l = tmp.length;
+                if(tmp[l-1]==1 && tmp[l-2]==0){
+                    tmp = [];
+                    self.update();
+                }
+            });
+    
+            return this;
+        }
+    
+        update(){
+            var self = this;
+            var data = this.getData();
+            var plist = this.wrap.find('>li');
+      
+            $.each(data,function($i, $item){
+                if((plist.eq($i).find('ul').length==0) && ($item.child.length>0)){
+                    var ulHtm = self.childHtm($item.child,plist.eq($i).find('button').data('target'));
+                    var parentLi = plist.eq($i);
+                    var btn = parentLi.find('button');
+                    parentLi.append( ulHtm );
+                    btn.prop('disabled',false);
+                }
+            });
+            // return wrap;
+        }
+    
+        create(){
+            var self = this;
+            var data = this.getData();
+            self.wrap.html('');
+    
+            $.each(data,function($index, $item) {
+                var hash    = self.hash();
+                var li      = self.tmplt.clone();
+                var parent  = $($item.parent);
+                var count   = $item.parent.nextSibling.nodeValue.replace(/[()]/g, '').replace(/\s/g,'') ;
+                li.find('a').attr('href',parent.attr('href'));
+                li.find('a').contents()[0].nodeValue = parent.text();
+                li.find('.count').text(count);
+                li.find('button').attr('data-toggle','collapse').attr('data-target',hash).attr('data-index',$index)
+                li.find('button').on('click',function(){
+                    self.expand($(this))
+                });
+                li.removeAttr('style');
+                if($item.child.length){
+                    li.append(self.childHtm($item.child,hash));
+                }
+                self.wrap.append(li);
+            });
+        }
+    
+        childHtm($item,hash){
+            var self = this;
+            var wrap = this.settings.childWrap.clone();
+            wrap.addClass('collapse').attr('id',hash);
+            $.each($item,function($i, $item){
+                var an = $($item);
+                var li = self.settings.childTmplt.clone();
+                li.find('a').attr('href',an.attr('href'));
+                li.find('a').text(an.text());
+                wrap.append(li);
+            });
+            return wrap;
+        }
+    
+        expand($el){
+            if($el.next().is('.collapse')){
+                $('#'+$el.data('target')).collapse('toggle');
+            }else{
+                $($('#content_ASPxTreeList1_U img')[$el.data('index')]).click();
+                $el.prop('disabled',true);
+            }
+        }
+    
+        getData(){
+            var isChild = function(el){ return el.is('tr[id*="content_ASPxTreeList1_R-B"]'); };
+            var isParent = function(el){ return !isChild(el); }
+            var target = $('#content_ASPxTreeList1_D tr[id*="content_ASPxTreeList1_R-"]');
+            var list = [];
+            target.each(function(){
+                if( isParent($(this)) ){
+                    list.push({
+                        parent: $(this).find('a[href]').get(0),
+                        child: [],
+                        button: $(this).find('.dxtl__Expand')
+                    })
+                }else if( isChild($(this)) ){
+                    
+                    list[list.length-1].child.push($(this).find('a[href]').get(0))
+                }
+            });
+            return list;
+        }
+    
+        hash(){
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for (var i = 0; i < 8; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+            return text;
+        }
     }
+    $.fn.category = function(opt){
+        return new Category($(this),opt);
+    }
+    $(document).on('ready',function(){
+        $('[data-provide="category"]').category();
+    })
 
-    $.fn.category = function(){
-        return new Category($(this));
-    }
 
     /*
     *   Archive
@@ -835,6 +953,7 @@
                 .attr('href',$(this).attr('href'))
                 .text($(this).text())
             item.insertAfter(el);
+            item.show();
         });
         el.remove();
         return this;
