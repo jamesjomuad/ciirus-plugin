@@ -1203,7 +1203,6 @@
 (function(win,$){
     class Modal
     {
-
         constructor(element,options) {
 
             if(element instanceof jQuery){
@@ -1214,7 +1213,8 @@
                 this.options = {
                     title: "Title",
                     header: true,
-                    footer: true
+                    footer: true,
+                    callback: window[this.target.data('callback')]
                 };
                 $.extend(this.options, options);
                 this.init();
@@ -1224,9 +1224,13 @@
         }
 
         init(){
+            var self = this;
             this.content = $(this.component());
             this.content.addClass('modalize')
             this.compose();
+            setTimeout(function() {
+                self.options.callback();
+            },500);
         }
 
         events(){
@@ -1282,8 +1286,7 @@
         dialog(content){
             
         }
-
-    } /* end class */
+    }
 
     $.fn.modalize = function(options){
         var modal = new Modal($(this) ,options);
