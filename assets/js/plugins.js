@@ -194,18 +194,43 @@
         constructor(){
             this.from       = $('#DateFrom');
             this.to         = $('#DateTo');
+            this.poolHeat   = $('#PoolHeat');
             this.quoteUrl   = "/EmbedQuoter.aspx?";
+            this.bookUrl    = "/quote-book.aspx?";
+            this.before     = function(){};
+            this.done       = function(res){};
+            this.success    = function(res){};
+            this.error      = function(msg){};
         }
 
         check(){
+            var self = this;
             var id = this.getPropertyID();
+            var dates = this.getDates();
             var query = $.param({
                 PropertyID: id,
-                ad: '10+nov+2018',
-                dd: '17+nov+2018'
+                ad: dates[0].value,
+                dd: dates[1].value
             });
             var decodedURL = decodeURIComponent(this.quoteUrl + query);
-            return $.get(decodedURL);
+            var remote = $.get(decodedURL);
+            //Before
+            this.before();
+            //Error
+            remote.done(function(res){
+                var error1   = $(res).find('[color="Red"]');
+                var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
+                if(error1.length){
+                    self.error(error1.text());
+                }else if(error2.length){
+                    self.error(error2.text());
+                }else{
+                    self.success($(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
+                }
+
+                self.done(res);
+            });
+            return remote;
         }
 
         month(num){
@@ -233,6 +258,7 @@
         }
 
         getDates(){
+            var self = this;
             var month   = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
             var from    = new Date(self.from.val());
             var to      = new Date(self.to.val());
@@ -252,7 +278,22 @@
                     value: departD().join('')
                 }
             ];
-        };
+        }
+
+        book(){
+            var self = this;
+            var id = this.getPropertyID();
+            var dates = this.getDates();
+            var query = $.param({
+                PID: id,
+                ad: dates[0].value,
+                dd: dates[1].value,
+                ph: self.poolHeat.val()
+            });
+            var decodedURL = decodeURIComponent(this.bookUrl + query);
+            window.location = decodedURL;
+        }
+
     }
 
     w.Quote = new Quote;
