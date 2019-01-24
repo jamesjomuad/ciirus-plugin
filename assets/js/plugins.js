@@ -5,6 +5,7 @@
 */
 (function(w,$){
     "use strict";
+    var Properties;
 
     w.params = [
         "ad",
