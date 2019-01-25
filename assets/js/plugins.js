@@ -186,49 +186,58 @@
 
 
 /*
-*   Quote
+*   Booker/Qoute
 */
 (function(w,$){
 
-    class Quote{
+    class Booker{
         constructor(){
-            this.from       = $('#DateFrom');
-            this.to         = $('#DateTo');
-            this.poolHeat   = $('#PoolHeat');
-            this.quoteUrl   = "/EmbedQuoter.aspx?";
-            this.bookUrl    = "/quote-book.aspx?";
-            this.before     = function(){};
-            this.done       = function(res){};
-            this.success    = function(res){};
-            this.error      = function(msg){};
+            this.quoteUrl = "/EmbedQuoter.aspx?";
+            this.bookUrl = "/quote-book.aspx?";
+            this.field = {
+                from:     $('#DateFrom'),
+                to:       $('#DateTo'),
+                poolheat: $('#PoolHeat')
+            };
+            this.event = {
+                before: 'booker.before',
+                done: 'booker.done',
+                success: 'booker.success',
+                error: 'booker.error'
+            }
         }
 
         check(){
             var self = this;
+            var $document = $(document);
             var id = this.getPropertyID();
             var dates = this.getDates();
-            var query = $.param({
+            var decodedURL = this.jsonToURI({
                 PropertyID: id,
                 ad: dates[0].value,
                 dd: dates[1].value
             });
-            var decodedURL = decodeURIComponent(this.quoteUrl + query);
-            var remote = $.get(decodedURL);
-            //Before
-            this.before();
-            //Error
+
+            /*
+            *   Firing events
+            */
+            if($document.triggerHandler(this.event.before)==false){return false;}
+
+            var remote = $.get(this.quoteUrl + decodedURL);
+
             remote.done(function(res){
                 var error1   = $(res).find('[color="Red"]');
                 var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
                 if(error1.length){
-                    self.error(error1.text());
+                    $document.trigger(self.event.error, error1.text())
                 }else if(error2.length){
-                    self.error(error2.text());
+                    $document.trigger(self.event.error, error2.text())
                 }else{
-                    self.success($(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
+                    $document.trigger(self.event.success, $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'))
                 }
-
-                self.done(res);
+                $document.trigger(self.event.done,res);
+            }).fail(function(jqXHR){
+                $document.trigger(self.event.error,"Network Error!");
             });
             return remote;
         }
@@ -260,8 +269,8 @@
         getDates(){
             var self = this;
             var month   = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-            var from    = new Date(self.from.val());
-            var to      = new Date(self.to.val());
+            var from    = new Date(self.field.from.val());
+            var to      = new Date(self.field.to.val());
             var arriveD = function(){
                 return [from.getDate(),'+',month[from.getMonth()],'+',from.getFullYear()];
             };
@@ -294,9 +303,27 @@
             window.location = decodedURL;
         }
 
+        mail(data){
+            // EmbedQuoter.aspx?PropertyID=261413&gnames=james&email=st.james.jomuad@gmail.com&ad=25+jan+2019&dd=1+feb+2019
+            var id = this.getPropertyID();
+            var dates = this.getDates();
+            var uri = this.jsonToURI({
+                PropertyID: id,
+                ad: dates[0].value,
+                dd: dates[1].value,
+                gname: data.name,
+                email: data.email
+            });
+            return $.get(this.quoteUrl + uri);
+        }
+
+        jsonToURI(json){
+            var query = $.param(json);
+            return decodeURIComponent(query);
+        }
     }
 
-    w.Quote = new Quote;
+    w.Booker = new Booker;
 
 })(window,jQuery);
 
