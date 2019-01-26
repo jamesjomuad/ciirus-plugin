@@ -205,6 +205,7 @@
             error: 'booker.error',
             mailBefore: 'booker.mail.before',
             mailAfter: 'booker.mail.after',
+            mailError: 'booker.mail.error',
         };
 
         this.check = function(){
@@ -294,10 +295,21 @@
                 PropertyID: id,
                 ad: dates[0].value,
                 dd: dates[1].value,
-                gname: data.name,
+                gnames: data.name,
                 email: data.email
             });
-            return $.get(this.quoteUrl + uri);
+            //Before send
+            $(document).triggerHandler(this.event.mailBefore);
+            var remote = $.get(this.quoteUrl + uri);
+            //After send
+            remote.done(function(res){
+                if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')>0){
+                    $(document).triggerHandler(this.event.mailAfter);
+                }
+            }).fail(function(xhr){
+                $(document).triggerHandler(this.event.mailError,xhr);
+            });
+            return remote;
         };
 
         this.jsonToURI = function(json){
