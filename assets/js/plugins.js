@@ -188,26 +188,26 @@
 /*
 *   Booker/Qoute
 */
-(function(w,$){
+(function(w, $){
 
-    class Booker{
-        constructor(){
-            this.quoteUrl = "/EmbedQuoter.aspx?";
-            this.bookUrl = "/quote-book.aspx?";
-            this.field = {
-                from:     $('#DateFrom'),
-                to:       $('#DateTo'),
-                poolheat: $('#PoolHeat')
-            };
-            this.event = {
-                before: 'booker.before',
-                done: 'booker.done',
-                success: 'booker.success',
-                error: 'booker.error'
-            }
-        }
+    function Booker(){
+        this.quoteUrl = "/EmbedQuoter.aspx?";
+        this.bookUrl = "/quote-book.aspx?";
+        this.field = {
+            from:     '#DateFrom',
+            to:       '#DateTo',
+            poolheat: '#PoolHeat'
+        };
+        this.event = {
+            before: 'booker.before',
+            done: 'booker.done',
+            success: 'booker.success',
+            error: 'booker.error',
+            mailBefore: 'booker.mail.before',
+            mailAfter: 'booker.mail.after',
+        };
 
-        check(){
+        this.check = function(){
             var self = this;
             var $document = $(document);
             var id = this.getPropertyID();
@@ -229,53 +229,38 @@
                 var error1   = $(res).find('[color="Red"]');
                 var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
                 if(error1.length){
-                    $document.trigger(self.event.error, error1.text())
+                    $document.trigger(self.event.error, error1.text());
                 }else if(error2.length){
-                    $document.trigger(self.event.error, error2.text())
+                    $document.trigger(self.event.error, error2.text());
                 }else{
-                    $document.trigger(self.event.success, $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'))
+                    $document.trigger(self.event.success, $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
                 }
                 $document.trigger(self.event.done,res);
             }).fail(function(jqXHR){
                 $document.trigger(self.event.error,"Network Error!");
             });
             return remote;
-        }
+        };
 
-        month(num){
-            return (["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"])[Number(num)-1];
-        }
+        this.month = function(num){
+            return (["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"])[Number(num)];
+        };
 
-        getArrival(){
-            var date = this.from.val().split('/');
-            return [
-                date[1],
-                '+',
-                this.month(date[0]),
-                '+',
-                date[2]
-            ].join('');
-        }
+        this.getPropertyID = function(){
+            var url = new URL(w.location.href.toLocaleLowerCase());
+            return url.searchParams.get("propertyid");
+        };
 
-        getDeparture(){
-            var date = this.to.val().split('/');
-        }
-
-        getPropertyID(){
-            var url = new URL(w.location.href);
-            return url.searchParams.get("PropertyID");
-        }
-
-        getDates(){
-            var self = this;
-            var month   = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-            var from    = new Date(self.field.from.val());
-            var to      = new Date(self.field.to.val());
+        this.getDates = function(){
+            var self    = this;
+            var month   = this.month;
+            var from    = new Date($(self.field.from).val());
+            var to      = new Date($(self.field.to).val());
             var arriveD = function(){
-                return [from.getDate(),'+',month[from.getMonth()],'+',from.getFullYear()];
+                return [from.getDate(),'+',month(from.getMonth()),'+',from.getFullYear()];
             };
             var departD = function(){
-                return [to.getDate(),'+',month[to.getMonth()],'+',to.getFullYear()];
+                return [to.getDate(),'+',month(from.getMonth()),'+',to.getFullYear()];
             };
             return [
                 {
@@ -287,24 +272,22 @@
                     value: departD().join('')
                 }
             ];
-        }
+        };
 
-        book(){
-            var self = this;
+        this.book = function(){
             var id = this.getPropertyID();
             var dates = this.getDates();
-            var query = $.param({
+            var url = this.jsonToURI({
                 PID: id,
                 ad: dates[0].value,
                 dd: dates[1].value,
-                ph: self.poolHeat.val()
+                ph: $(this.field.poolHeat).val()
             });
-            var decodedURL = decodeURIComponent(this.bookUrl + query);
-            window.location = decodedURL;
-        }
+            window.location = this.bookUrl + url;
+            return this;
+        };
 
-        mail(data){
-            // EmbedQuoter.aspx?PropertyID=261413&gnames=james&email=st.james.jomuad@gmail.com&ad=25+jan+2019&dd=1+feb+2019
+        this.mail = function(data){
             var id = this.getPropertyID();
             var dates = this.getDates();
             var uri = this.jsonToURI({
@@ -315,17 +298,19 @@
                 email: data.email
             });
             return $.get(this.quoteUrl + uri);
-        }
+        };
 
-        jsonToURI(json){
+        this.jsonToURI = function(json){
             var query = $.param(json);
             return decodeURIComponent(query);
-        }
+        };
+
+        return this;
     }
 
-    w.Booker = new Booker;
+    w.Booker = new Booker();
 
-})(window,jQuery);
+})(window, jQuery);
 
 
 /*
