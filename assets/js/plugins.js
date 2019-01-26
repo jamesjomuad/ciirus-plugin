@@ -189,17 +189,18 @@
 *   Booker/Qoute
 */
 (function(w, $){
+
     function Booker(){
         var quoteUrl = "/EmbedQuoter.aspx?";
         var bookUrl = "/quote-book.aspx?";
 
-        this.param = {
+        this._param = {
             pid   : null,
-            from  : "#DateFrom",
-            to    : "#DateTo",
-            ph    : "#PoolHeat",
-            name  : "",
-            email : ""
+            from  : null,
+            to    : null,
+            ph    : null,
+            name  : null,
+            email : null
         };
 
         this._event = {
@@ -212,14 +213,20 @@
             "mail.error"  : []
         }
 
+        this.param = function(params){
+            this._param = $.extend(this._param,params);
+            this._param.pid = this._param.pid || this.getPropertyID();
+            this._param.from = this.formatDate(params.from) || this.formatDate($("#DateFrom,.DateFrom,.to").first().val());
+            this._param.to = this.formatDate(params.to) || this.formatDate($("#DateTo,.DateTo,.to").first().val());
+            return this;
+        };
+
         this.check = function(){
             var self = this;
-            var dates = this.getDates();
-            self.pid = this.getPropertyID();
             var decodedURL = this.jsonToURI({
-                PropertyID: self.pid,
-                ad: dates[0].value,
-                dd: dates[1].value
+                PropertyID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to
             });
 
             /*
@@ -246,8 +253,27 @@
             return remote;
         };
 
-        this.month = function(num){
-            return (["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"])[Number(num)];
+        this.mail = function(){
+            var self = this;
+            var uri = this.jsonToURI({
+                PropertyID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to,
+                gnames: this._param.name,
+                email: this._param.email
+            });
+            //Before send
+            this.trigger('mail.before');
+            var remote = $.get(quoteUrl + uri);
+            //After send
+            remote.done(function(res){
+                if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')!=-1){
+                    self.trigger('mail.after');
+                }
+            }).fail(function(xhr){
+                self.trigger('mail.error',xhr);
+            });
+            return remote;
         };
 
         this.getPropertyID = function(){
@@ -255,65 +281,22 @@
             return url.searchParams.get("propertyid");
         };
 
-        this.getDates = function(){
-            var self    = this;
-            var month   = this.month;
-            var from    = new Date($(self.param.from).val());
-            var to      = new Date($(self.param.to).val());
-            var arriveD = function(){
-                return [from.getDate(),'+',month(from.getMonth()),'+',from.getFullYear()];
-            };
-            var departD = function(){
-                return [to.getDate(),'+',month(from.getMonth()),'+',to.getFullYear()];
-            };
-            return [
-                {
-                    name:'ad',
-                    value: arriveD().join('')
-                },
-                {
-                    name:'dd',
-                    value: departD().join('')
-                }
-            ];
+        this.formatDate = function(dmy){
+            if(dmy)
+            return $.datepicker.formatDate('dd+M+yy', new Date(dmy));
+            else
+            return false;
         };
 
         this.book = function(){
-            this.pid = this.getPropertyID();
-            var dates = this.getDates();
             var url = this.jsonToURI({
-                PID: this.pid,
-                ad: dates[0].value,
-                dd: dates[1].value,
-                ph: $(this.param.ph).val()
+                PID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to,
+                ph: this._param.ph
             });
             window.location = bookUrl + url;
             return this;
-        };
-
-        this.mail = function(data){
-            var self = this;
-            var id = this.getPropertyID();
-            var dates = this.getDates();
-            var uri = this.jsonToURI({
-                PropertyID: id,
-                ad: dates[0].value,
-                dd: dates[1].value,
-                gnames: data.name,
-                email: data.email
-            });
-            //Before send
-            this.trigger('mail.before');
-            var remote = $.get(quoteUrl + uri);
-            //After send
-            remote.done(function(res){
-                if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')>0){
-                    self.trigger('mail.after');
-                }
-            }).fail(function(xhr){
-                self.trigger('error',xhr);
-            });
-            return remote;
         };
 
         this.jsonToURI = function(json){
@@ -336,7 +319,9 @@
 
         return this;
     }
+
     w.Booker = Booker;
+
     return w;
 })(window, jQuery);
 
