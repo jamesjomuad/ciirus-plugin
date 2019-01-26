@@ -189,32 +189,35 @@
 *   Booker/Qoute
 */
 (function(w, $){
-
     function Booker(){
-        this.quoteUrl = "/EmbedQuoter.aspx?";
-        this.bookUrl = "/quote-book.aspx?";
-        this.field = {
-            from:     '#DateFrom',
-            to:       '#DateTo',
-            poolheat: '#PoolHeat'
+        var quoteUrl = "/EmbedQuoter.aspx?";
+        var bookUrl = "/quote-book.aspx?";
+
+        this.param = {
+            pid   : null,
+            from  : "#DateFrom",
+            to    : "#DateTo",
+            ph    : "#PoolHeat",
+            name  : "",
+            email : ""
         };
-        this.event = {
-            before: 'booker.before',
-            done: 'booker.done',
-            success: 'booker.success',
-            error: 'booker.error',
-            mailBefore: 'booker.mail.before',
-            mailAfter: 'booker.mail.after',
-            mailError: 'booker.mail.error',
-        };
+
+        this._event = {
+            "before"      : [],
+            "done"        : [],
+            "success"     : [],
+            "error"       : [],
+            "mail.before" : [],
+            "mail.after"  : [],
+            "mail.error"  : []
+        }
 
         this.check = function(){
             var self = this;
-            var $document = $(document);
-            var id = this.getPropertyID();
             var dates = this.getDates();
+            self.pid = this.getPropertyID();
             var decodedURL = this.jsonToURI({
-                PropertyID: id,
+                PropertyID: self.pid,
                 ad: dates[0].value,
                 dd: dates[1].value
             });
@@ -222,23 +225,23 @@
             /*
             *   Firing events
             */
-            if($document.triggerHandler(this.event.before)==false){return false;}
+            if(this.trigger('before')==false){return false;}
 
-            var remote = $.get(this.quoteUrl + decodedURL);
+            var remote = $.get(quoteUrl + decodedURL);
 
             remote.done(function(res){
                 var error1   = $(res).find('[color="Red"]');
                 var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
                 if(error1.length){
-                    $document.trigger(self.event.error, error1.text());
+                    self.trigger("error", error1.text());
                 }else if(error2.length){
-                    $document.trigger(self.event.error, error2.text());
+                    self.trigger("error", error2.text());
                 }else{
-                    $document.trigger(self.event.success, $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
+                    self.trigger("success", $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
                 }
-                $document.trigger(self.event.done,res);
+                self.trigger("done",res);
             }).fail(function(jqXHR){
-                $document.trigger(self.event.error,"Network Error!");
+                self.trigger("error","Network Error!");
             });
             return remote;
         };
@@ -255,8 +258,8 @@
         this.getDates = function(){
             var self    = this;
             var month   = this.month;
-            var from    = new Date($(self.field.from).val());
-            var to      = new Date($(self.field.to).val());
+            var from    = new Date($(self.param.from).val());
+            var to      = new Date($(self.param.to).val());
             var arriveD = function(){
                 return [from.getDate(),'+',month(from.getMonth()),'+',from.getFullYear()];
             };
@@ -276,19 +279,20 @@
         };
 
         this.book = function(){
-            var id = this.getPropertyID();
+            this.pid = this.getPropertyID();
             var dates = this.getDates();
             var url = this.jsonToURI({
-                PID: id,
+                PID: this.pid,
                 ad: dates[0].value,
                 dd: dates[1].value,
-                ph: $(this.field.poolHeat).val()
+                ph: $(this.param.ph).val()
             });
-            window.location = this.bookUrl + url;
+            window.location = bookUrl + url;
             return this;
         };
 
         this.mail = function(data){
+            var self = this;
             var id = this.getPropertyID();
             var dates = this.getDates();
             var uri = this.jsonToURI({
@@ -299,15 +303,15 @@
                 email: data.email
             });
             //Before send
-            $(document).triggerHandler(this.event.mailBefore);
-            var remote = $.get(this.quoteUrl + uri);
+            this.trigger('mail.before');
+            var remote = $.get(quoteUrl + uri);
             //After send
             remote.done(function(res){
                 if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')>0){
-                    $(document).triggerHandler(this.event.mailAfter);
+                    self.trigger('mail.after');
                 }
             }).fail(function(xhr){
-                $(document).triggerHandler(this.event.mailError,xhr);
+                self.trigger('error',xhr);
             });
             return remote;
         };
@@ -317,13 +321,24 @@
             return decodeURIComponent(query);
         };
 
+        this.on = function(eventName, fn){
+            this._event[eventName].push(fn);
+            return this;
+        }
+
+        this.trigger = function(e,param){
+            var x;
+            $(this._event[e]).each(function(i,fn){
+                x = fn(param);
+            });
+            return x;
+        };
+
         return this;
     }
-
-    w.Booker = new Booker();
-
+    w.Booker = Booker;
+    return w;
 })(window, jQuery);
-
 
 /*
 *   Shake effect
