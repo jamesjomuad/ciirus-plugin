@@ -44,7 +44,6 @@
         "pool",
         "PoolHeat",
         "propertytype",
-        "propertytype",
         "SeaOceanView",
         "sfp",
         "sleeps",
@@ -93,7 +92,7 @@
 
 
 /*
-    Newsletter
+*   Newsletter
 */
 (function(w,$){
     $.fn.newsletter = function(){
@@ -184,146 +183,6 @@
     }
 })(window,jQuery);
 
-
-/*
-*   Booker/Qoute
-*/
-(function(w, $){
-
-    function Booker(){
-        var quoteUrl = "/EmbedQuoter.aspx?";
-        var bookUrl = "/quote-book.aspx?";
-
-        this._param = {
-            pid   : null,
-            from  : null,
-            to    : null,
-            ph    : null,
-            name  : null,
-            email : null
-        };
-
-        this._event = {
-            "before"      : [],
-            "done"        : [],
-            "success"     : [],
-            "error"       : [],
-            "mail.before" : [],
-            "mail.after"  : [],
-            "mail.error"  : []
-        }
-
-        this.param = function(params){
-            this._param = $.extend(this._param,params);
-            this._param.pid = this._param.pid || this.getPropertyID();
-            this._param.from = this.formatDate(params.from) || this.formatDate($("#DateFrom,.DateFrom,.to").first().val());
-            this._param.to = this.formatDate(params.to) || this.formatDate($("#DateTo,.DateTo,.to").first().val());
-            return this;
-        };
-
-        this.check = function(){
-            var self = this;
-            var decodedURL = this.jsonToURI({
-                PropertyID: this._param.pid,
-                ad: this._param.from,
-                dd: this._param.to
-            });
-
-            /*
-            *   Firing events
-            */
-            if(this.trigger('before')==false){return false;}
-
-            var remote = $.get(quoteUrl + decodedURL);
-
-            remote.done(function(res){
-                var error1   = $(res).find('[color="Red"]');
-                var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
-                if(error1.length){
-                    self.trigger("error", error1.text());
-                }else if(error2.length){
-                    self.trigger("error", error2.text());
-                }else{
-                    self.trigger("success", $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
-                }
-                self.trigger("done",res);
-            }).fail(function(jqXHR){
-                self.trigger("error","Network Error!");
-            });
-            return remote;
-        };
-
-        this.mail = function(){
-            var self = this;
-            var uri = this.jsonToURI({
-                PropertyID: this._param.pid,
-                ad: this._param.from,
-                dd: this._param.to,
-                gnames: this._param.name,
-                email: this._param.email
-            });
-            //Before send
-            this.trigger('mail.before');
-            var remote = $.get(quoteUrl + uri);
-            //After send
-            remote.done(function(res){
-                if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')!=-1){
-                    self.trigger('mail.after');
-                }
-            }).fail(function(xhr){
-                self.trigger('mail.error',xhr);
-            });
-            return remote;
-        };
-
-        this.getPropertyID = function(){
-            var url = new URL(w.location.href.toLocaleLowerCase());
-            return url.searchParams.get("propertyid");
-        };
-
-        this.formatDate = function(dmy){
-            if(dmy)
-            return $.datepicker.formatDate('dd+M+yy', new Date(dmy));
-            else
-            return false;
-        };
-
-        this.book = function(){
-            var url = this.jsonToURI({
-                PID: this._param.pid,
-                ad: this._param.from,
-                dd: this._param.to,
-                ph: this._param.ph
-            });
-            window.location = bookUrl + url;
-            return this;
-        };
-
-        this.jsonToURI = function(json){
-            var query = $.param(json);
-            return decodeURIComponent(query);
-        };
-
-        this.on = function(eventName, fn){
-            this._event[eventName].push(fn);
-            return this;
-        }
-
-        this.trigger = function(e,param){
-            var x;
-            $(this._event[e]).each(function(i,fn){
-                x = fn(param);
-            });
-            return x;
-        };
-
-        return this;
-    }
-
-    w.Booker = Booker;
-
-    return w;
-})(window, jQuery);
 
 /*
 *   Shake effect
@@ -504,181 +363,6 @@
         $('<label>'+summary+'</label>').insertBefore(this);
     }
 })(jQuery);
-
-
-/* 
-*   Review Helper 
-*/
-(function($){
-    /*
-    *   Review Function @Property Details
-    *   Must set a repeating html template with classes
-    *   Required classes: name, content, date, rating
-    */
-    var Paginator = function(el,options){
-        this.el = $(el);
-        this.template = {
-            wrapper: '<ul class="pagination">',
-            childWrapper: '<li></li>',
-            page: '<a class="page" href="#">1</a>',
-            prev: '<a href="#" class="prev"><i class="fa fa-angle-left"></i></a>',
-            next: '<a href="#" class="next"><i class="fa fa-angle-right"></i></a>',
-        };
-        this.getPaginator = function(){
-            return $('#content_descriptions1_GuestReviews1_Reviews_PGT .dxp-num');
-        };
-        this.getPrevNext = function(){
-            return $('#content_descriptions1_GuestReviews1_Reviews_PGT [onclick*=PBP], #content_descriptions1_GuestReviews1_Reviews_PGT [onclick*=PBN]');
-        };
-        this.build = function(){
-            var self     = this;
-            var $wrapper = $(this.template.wrapper);
-            var $prev    = $(self.template.prev);
-            var $next    = $(self.template.next);
-
-            // Clear wrapper
-            this.el.html("");
-
-            // Create pages btn
-            this.getPaginator()
-            .each(function(x){
-                var $childWrapper = $(self.template.childWrapper);
-                var $page         = $(self.template.page);
-                var $clone        = $(this).clone()
-
-                if($clone.is('.dxp-current')){
-                    $page.text(x+1)
-                    $wrapper.append($childWrapper.append($page.addClass('dxp-current')))
-                }else{
-                    $clone.removeAttr('class');
-                    $clone.text($clone.text());
-                    $clone.addClass($page.attr('class'))
-                    $wrapper.append($childWrapper.append($clone))
-                }
-            });
-
-            // Add Prev btn
-            if(!$wrapper.find('.dxp-current').closest('li').is(':first-child')){
-                $prev.attr('onclick',"aspxDVPagerClick('content_descriptions1_GuestReviews1_Reviews', 'PBP')");
-                $wrapper.prepend($(self.template.childWrapper).append($prev))
-            }
-
-            // Add Next btn
-            if(!$wrapper.find('.dxp-current').closest('li').is(':last-child')){
-                $next.attr('onclick',"aspxDVPagerClick('content_descriptions1_GuestReviews1_Reviews', 'PBN')");
-                $wrapper.append($(self.template.childWrapper).append($next));
-            }
-
-            this.el.append($wrapper);
-            this.el.find('a').on('click',function(e){
-                e.preventDefault()
-            })
-            return this;
-        };
-        this.init = function(){
-            if(this.getPaginator().length)
-            this.build();
-        };
-
-        return this.init();
-    }; 
-
-    var Review = function(el,opt){
-        this.element      = el;
-        this.contents     = [];
-        this._name        = "Review Templater";
-        this._description = "Helps rendering of reveiws into the defferent template.";
-        this.options      = $.extend( {
-            pagination: null,
-            beforeLoad: function(){},
-            afterLoad: function(){},
-            onEachRender: function(el,data){},
-            whenEmpty: function(){},
-        }, opt );
-
-        this.paginator = new Paginator(this.options.pagination);
-        this.clear = function(){
-            this.contents = [];
-            this.element.nextAll().remove();
-            return this;
-        };
-        this.getContents = function(){
-            var self = this;
-            this.contents = [];
-            if(!this.isEmpty())
-            $('#content_descriptions1_GuestReviews1_Reviews_ICell .dxdvItem_DevEx')
-            .each(function(){
-                var content = {
-                    name:   $.trim($($(this).find('table>tbody>tr').first().find('td>b')[0].nextSibling).text()),
-                    date:   $.trim($($(this).find('table>tbody>tr').first().find('td>b')[1].nextSibling).text()),
-                    rating: $($(this).find('table>tbody>tr').first().find('td>b').siblings('table').find('td')[1]).find('div'),
-                    content:$(this).find('table>tbody>tr').eq(2).text()
-                }
-                self.contents.push(content)
-            });
-            return self.contents;
-        };
-        this.isEmpty = function(){
-            return $('#content_descriptions1_GuestReviews1_Reviews_CCell .dxdvEmptyData_DevEx').length ? true : false;
-        };
-        this.build = function(){
-            var self = this;
-            var template = this.element
-            this.clear();
-            $.each(this.getContents().reverse(),function(x,v){
-                var clone = template.clone();
-                clone.removeData();
-                clone.addClass(v.name.toLowerCase())
-                clone.find('.name').text(v.name);
-                clone.find('.content').text(v.content);
-                clone.find('.date').first().text(v.date);
-                clone.find('.rating').append(v.rating);
-                clone.show();
-                clone.removeAttr('style');
-                clone.insertAfter(template);
-                self.options.onEachRender(clone,v)
-            });
-            this.element.hide();
-            return this;
-        };
-        this.init = function(){
-            var self = this;
-            if(this.element){
-                if(!this.isEmpty()){
-                    this.build()
-                }else{
-                    this.options.whenEmpty()
-                }
-            }
-
-            /* 
-            *   Obeserver: DOM listener 
-            *   This is where some magics happen 
-            */
-            $('#content_descriptions1_GuestReviews1_Reviews_CCell').observe({
-                before:function(){
-                    self.options.beforeLoad()
-                },
-                after:function(){
-                    // Refreshes pagination when new content is loaded
-                    self.build()
-                    self.paginator.build()
-                    self.options.afterLoad()
-                }
-            });
-            
-            return this;
-        };
-        return this.init();
-    }
-
-    $.fn.review = function (options) {
-		var review = new Review($(this) ,options);
-		$(this).data('review', review);
-		return review;
-	}
-})(jQuery);
-
 
 
 /*
@@ -1308,7 +992,6 @@
         }
 
         header(){
-            console.log(this)
             if(this.options.header)
             return ['<div class="modal-header">',
             '<button type="button" class="close" data-dismiss="modal" aria-label="Close">',
@@ -1481,12 +1164,12 @@
 
 
 /*
-    Contact Form
-    Description: A contact form plugin that is usable anywhere in the page
-    Initilization: 
+*   Contact Form
+*   Description: A contact form plugin that is usable anywhere in the page
+*   Initilization: 
         by data: <div data-provide="cf"></div>
         by function: $('#contact').contactForm();
-    Options:
+*   Options:
         debug: false,
         redirect: true,
         beforeSubmit: function(data)
@@ -1746,4 +1429,355 @@
         $('[data-provide="contactForm"],[data-provide="cf"]').contactForm();
     });
 
-})(window,jQuery)
+})(window,jQuery);
+
+
+/*
+*   Booker/Qoute
+*/
+(function(w, $){
+
+    function Booker(){
+        var quoteUrl = "/EmbedQuoter.aspx?";
+        var bookUrl = "/quote-book.aspx?";
+
+        this._param = {
+            pid   : null,
+            from  : null,
+            to    : null,
+            ph    : null,
+            name  : null,
+            email : null
+        };
+
+        this._event = {
+            "before"      : [],
+            "done"        : [],
+            "success"     : [],
+            "error"       : [],
+            "mail.before" : [],
+            "mail.after"  : [],
+            "mail.error"  : []
+        }
+
+        this.param = function(params){
+            this._param = $.extend(this._param,params);
+            this._param.pid = this._param.pid || this.getPropertyID();
+            this._param.from = this.formatDate(params.from) || this.formatDate($("#DateFrom,.DateFrom,.to").first().val());
+            this._param.to = this.formatDate(params.to) || this.formatDate($("#DateTo,.DateTo,.to").first().val());
+            return this;
+        };
+
+        this.check = function(){
+            var self = this;
+            var decodedURL = this.jsonToURI({
+                PropertyID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to
+            });
+
+            /*
+            *   Firing events
+            */
+            if(this.trigger('before')==false){return false;}
+
+            var remote = $.get(quoteUrl + decodedURL);
+
+            remote.done(function(res){
+                var error1   = $(res).find('[color="Red"]');
+                var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
+                if(error1.length){
+                    self.trigger("error", error1.text());
+                }else if(error2.length){
+                    self.trigger("error", error2.text());
+                }else{
+                    self.trigger("success", $(res).find('#rates1_pnlQuoteResults_tbQuoteResults_C0 .ratesControlQuoteResponse>table'));
+                }
+                self.trigger("done",res);
+            }).fail(function(jqXHR){
+                self.trigger("error","Network Error!");
+            });
+            return remote;
+        };
+
+        this.mail = function(){
+            var self = this;
+            var uri = this.jsonToURI({
+                PropertyID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to,
+                gnames: this._param.name,
+                email: this._param.email
+            });
+            //Before send
+            this.trigger('mail.before');
+            var remote = $.get(quoteUrl + uri);
+            //After send
+            remote.done(function(res){
+                if(res.indexOf('Thank You! - 1 Quotes have been sent via E-mail.')!=-1){
+                    self.trigger('mail.after');
+                }
+            }).fail(function(xhr){
+                self.trigger('mail.error',xhr);
+            });
+            return remote;
+        };
+
+        this.getPropertyID = function(){
+            var url = new URL(w.location.href.toLocaleLowerCase());
+            return url.searchParams.get("propertyid");
+        };
+
+        this.formatDate = function(dmy){
+            if(dmy)
+            return $.datepicker.formatDate('dd+M+yy', new Date(dmy));
+            else
+            return false;
+        };
+
+        this.book = function(){
+            var url = this.jsonToURI({
+                PID: this._param.pid,
+                ad: this._param.from,
+                dd: this._param.to,
+                ph: this._param.ph
+            });
+            window.location = bookUrl + url;
+            return this;
+        };
+
+        this.jsonToURI = function(json){
+            var query = $.param(json);
+            return decodeURIComponent(query);
+        };
+
+        this.on = function(eventName, fn){
+            this._event[eventName].push(fn);
+            return this;
+        }
+
+        this.trigger = function(e,param){
+            var x;
+            $(this._event[e]).each(function(i,fn){
+                x = fn(param);
+            });
+            return x;
+        };
+
+        return this;
+    }
+
+    w.Booker = Booker;
+
+    return w;
+})(window, jQuery);
+
+
+/* 
+*   Review 
+*   Review Function @Property Details
+*   Must set a repeating html template with classes
+*   Required classes: name, content, date, rating
+*   Optional class: alias
+*/
+(function($){
+    function ReviewPager(el,options){
+        this.el = $(el);
+        this.template = {
+            wrapper: '<ul class="pagination">',
+            childWrapper: '<li></li>',
+            page: '<a class="page" href="#">1</a>',
+            prev: '<a href="#" class="prev"><i class="fa fa-angle-left"></i></a>',
+            next: '<a href="#" class="next"><i class="fa fa-angle-right"></i></a>',
+        };
+        
+        this.init = function(){
+            var self = this;
+
+            if(this.getPaginator().length)
+            this.build();
+
+            $('#content_descriptions1_GuestReviews1_Reviews_CCell').observe({
+                after:function(){
+                    // Refreshes pagination when new content is loaded
+                    self.build();
+                }
+            });
+        };
+
+        this.getPaginator = function(){
+            return $('#content_descriptions1_GuestReviews1_Reviews_PGT .dxp-num');
+        };
+
+        this.getPrevNext = function(){
+            return $('#content_descriptions1_GuestReviews1_Reviews_PGT [onclick*=PBP], #content_descriptions1_GuestReviews1_Reviews_PGT [onclick*=PBN]');
+        };
+
+        this.build = function(){
+            var self     = this;
+            var $wrapper = $(this.template.wrapper);
+            var $prev    = $(self.template.prev);
+            var $next    = $(self.template.next);
+
+            // Clear wrapper
+            this.el.html("");
+
+            // Create pages btn
+            this.getPaginator()
+            .each(function(x){
+                var $childWrapper = $(self.template.childWrapper);
+                var $page         = $(self.template.page);
+                var $clone        = $(this).clone();
+
+                if($clone.is('.dxp-current')){
+                    $page.text(x+1);
+                    $wrapper.append($childWrapper.append($page.addClass('dxp-current')));
+                    $childWrapper.addClass('active');
+                }else{
+                    $clone.removeAttr('class');
+                    $clone.text($clone.text());
+                    $clone.addClass($page.attr('class'));
+                    $wrapper.append($childWrapper.append($clone));
+                }
+            });
+
+            // Add Prev btn
+            if(!$wrapper.find('.dxp-current').closest('li').is(':first-child')){
+                $prev.attr('onclick',"aspxDVPagerClick('content_descriptions1_GuestReviews1_Reviews', 'PBP')");
+                $wrapper.prepend($(self.template.childWrapper).append($prev));
+            }
+
+            // Add Next btn
+            if(!$wrapper.find('.dxp-current').closest('li').is(':last-child')){
+                $next.attr('onclick',"aspxDVPagerClick('content_descriptions1_GuestReviews1_Reviews', 'PBN')");
+                $wrapper.append($(self.template.childWrapper).append($next));
+            }
+
+            this.el.append($wrapper);
+            this.el.find('a').on('click',function(e){
+                e.preventDefault();
+            });
+            return this;
+        };
+
+        return this.init();
+    }
+
+    function Review(el,opt){
+        this.element      = el;
+        this.contents     = [];
+        this.$items       = "#content_descriptions1_GuestReviews1_Reviews_ICell .dxdvItem_DevEx";
+        this.wrap         = null;
+        this._name        = "Review Templater";
+        this._description = "Helps rendering of reveiws into the defferent template.";
+        this.options      = $.extend({
+            pager: null,
+            beforeLoad: function(){},
+            afterLoad: function(){},
+            onEachRender: function(el,data){}
+        }, opt );
+
+        this.init = function(){
+            var self = this;
+
+            if(this.element){
+                if(!this.isEmpty()){
+                    this.wrap = $('<div>',{id:('review_'+this.hash()+this.hash().toLowerCase())})
+                    .insertBefore(this.element)
+                    .append(this.element);
+                    this.build();
+                }
+            }
+
+            /* Obeserver: DOM listener */
+            $('#content_descriptions1_GuestReviews1_Reviews_CCell').observe({
+                before:function(){
+                    self.options.beforeLoad();
+                },
+                after:function(){
+                    // Refreshes pagination when new content is loaded
+                    self.build();
+                    self.options.afterLoad();
+                }
+            });
+
+            return this;
+        };
+
+        this.clear = function(){
+            this.contents = [];
+            this.element.nextAll().remove();
+            return this;
+        };
+
+        this.getContents = function(){
+            var self = this;
+            this.contents = [];
+            if(!this.isEmpty())
+            {
+                $(this.$items).clone().each(function(){
+                    var content = {
+                        name:   $.trim($($(this).find('table>tbody>tr').first().find('td>b')[0].nextSibling).text()),
+                        date:   $.trim($($(this).find('table>tbody>tr').first().find('td>b')[1].nextSibling).text()),
+                        rating: $($(this).find('table>tbody>tr').first().find('td>b').siblings('table').find('td')[1]).find('div'),
+                        content:$(this).find('table>tbody>tr').eq(2).text()
+                    };
+                    content.rating.find('a').remove();
+                    content.rating.removeAttr('id');
+                    self.contents.push(content);
+                });
+            }
+            return self.contents;
+        };
+
+        this.isEmpty = function(){
+            return $('#content_descriptions1_GuestReviews1_Reviews_CCell .dxdvEmptyData_DevEx').length ? true : false;
+        };
+
+        this.build = function(){
+            var self = this;
+            var template = this.element;
+            this.clear();
+            $.each(this.getContents().reverse(),function(x,v){
+                var clone = template.clone();
+                clone.removeData();
+                clone.find('.name').text(v.name);
+                clone.find('.content').text(v.content);
+                clone.find('.date').first().text(v.date);
+                clone.find('.rating').html('').append(v.rating);
+                clone.find('.alias').text(v.name[0]);
+                clone.show();
+                clone.removeAttr('style');
+                clone.insertAfter(template);
+                self.options.onEachRender(clone,v);
+            });
+            this.element.hide();
+            return this;
+        };
+
+        this.hash = function(){
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for (var i = 0; i < 8; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+            return text;
+        };
+
+        return this.init();
+    }
+
+    $.fn.reviewPager = function (options) {
+		return new ReviewPager($(this) ,options);
+    };
+
+    $.fn.review = function (options) {
+        var review = new Review($(this) ,options);
+        review.wrap.data('review',review);
+		return review;
+    };
+    
+    $(document).ready(function(){
+        $('[data-provide="review-pager"]').reviewPager();
+        $('[data-provide="review"]').review();
+    });
+})(jQuery);
