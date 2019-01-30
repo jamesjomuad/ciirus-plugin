@@ -1,7 +1,7 @@
 /*
-    v3.5
-    Description: Ciirus tools and utilities.
-    Tags: Quote, Calendar, Blog, Review, Paginations, Newsletter, Field store and etc
+*  v3.5
+*  Description: Ciirus tools and utilities.
+*  Tags: Quote, Calendar, Blog, Review, Paginations, Newsletter, Field store and etc
 */
 (function(w,$){
     "use strict";
@@ -64,7 +64,7 @@
 
     w.onPage = function(page,fn){
         var is = (window.location.href.indexOf(page) > -1);
-        if(is)
+        if(is && fn)
         fn();
         return is;
     }
@@ -86,6 +86,10 @@
         }; getProperties();
         return getProperties;
     })()
+
+    $.wait = function( callback, seconds){
+        return window.setTimeout( callback, seconds * 1000 );
+    }
 
     return w;
 })(window,jQuery);
@@ -361,356 +365,6 @@
         });
 
         $('<label>'+summary+'</label>').insertBefore(this);
-    }
-})(jQuery);
-
-
-/*
-*   Blog Helper
-*/
-(function($){
-    /*
-    *   Use this template: <nav class="pagination"> or create custom
-    */
-    var Paginate = function(el,opt){
-        var self        = this;
-        this.el         = el;
-        this.$base      = $('.dxdvPagerPanel_Office2003Olive').first();
-        this.options    = $.extend({
-            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(`content_Blog2`, `PBF`)"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(`content_Blog2`, `PBP`)"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(`content_Blog2`, `PBN`)"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(`content_Blog2`, `PBL`)"> <span>&raquo;</span> </a></li></ul>'
-        }, opt );
-
-        this.process = function(){
-            var btnBase  = this.$base.find('.dxpLite_PlasticBlue').first().find('.dxp-button');
-            var template = $(this.options.paginationTemplate);
-            var firstP   = $(btnBase[0]);
-            var prev     = $(btnBase[1]);
-            var next     = $(btnBase[3]);
-            var lastP    = $(btnBase[2]);
-
-            if(firstP.is('.dxp-disabledButton'))
-            template.find('.first').removeAttr('onclick').closest('li').addClass("disabled");
-            if(prev.is('.dxp-disabledButton'))
-            template.find('.prev').removeAttr('onclick').closest('li').addClass("disabled");
-            if(next.is('.dxp-disabledButton'))
-            template.find('.next').removeAttr('onclick').closest('li').addClass("disabled");
-            if(lastP.is('.dxp-disabledButton'))
-            template.find('.last').removeAttr('onclick').closest('li').addClass("disabled");
-
-            // Set summary
-            template.find('span.label').text(this.getSummary());
-            template.on("click",function(e){e.preventDefault()});
-
-            $(this.options.pagination).html("");
-
-            if(this.getSummary()!="Page 1 of 1")
-            return this.el.append(template);
-        }
-        this.getSummary = function(){
-            return this.$base.find('.dxp-summary').first().text();
-        }
-        this.build = function(){
-            this.el.html("");
-            this.process();
-        }
-    }
-
-    $.fn.paginate = function(options){
-        if(!$(this).length)
-        return $(this);
-        var paginate = new Paginate($(this),options);
-        paginate.build();
-
-		$(this).data('paginate', paginate);
-		return paginate;
-    }
-
-    /*
-    *   Classes needed in the template:
-    *   .title, .date, .category, .content, .url
-    */
-    var Blogs = function(el,opt){
-        this.el         = el;
-        this.$base      = $('#content_Blog2_CCell');
-        this.options    = $.extend({
-            pagination: null,
-            onContentRender: function(el){}
-        }, opt );
-
-        // Initilize pagination
-        this.paginate = new Paginate(this.options.pagination);
-        this.el.hide();
-
-        this.getContents = function(){
-            var contents = [];
-            $('#content_Blog2_ICell .bodyText').each(function(){
-                $(this).find('[id*="blogMainContainer"] p').filter(function () { return $.trim(this.innerHTML) == "" }).remove();
-                var content = $(this).find('[id*="blogMainContainer"] tr').not(':first-child').text();
-
-                contents.push({
-                    title: $(this).find('a>h1').text(),
-                    date: $(this).find('.dateAdded').text(),
-                    category: $(this).find('.blogCatagoryID').text(),
-                    content: content,
-                    url: $(this).find('.blogLink').attr('href')
-                })
-            })
-            return contents;
-        }
-        this.build = function(){
-            var self = this;
-            this.clear();
-            // Build contents
-            $.each(this.getContents().reverse(),function(x,v){
-                var cloneTemplate = self.el.clone();
-                cloneTemplate.find('.title').text(v.title)
-                cloneTemplate.find('.date').text(v.date)
-                cloneTemplate.find('.category').text(v.category)
-                cloneTemplate.find('.content').html($('<p>').text(v.content))
-                cloneTemplate.find('.url').attr('href',v.url)
-                cloneTemplate.removeAttr('style')
-                cloneTemplate.insertAfter(self.el);
-                self.options.onContentRender(cloneTemplate);
-
-                if(cloneTemplate.find('.title').closest('a'))
-                cloneTemplate.find('.title').closest('a').attr('href',v.url);
-            });
-            return this;
-        }
-        this.clear = function(){
-            this.el.nextAll().remove();
-            return this;
-        };
-        this.init = function(){
-            var self = this;
-            this.build();
-            this.$base.observe({
-                before:function(){
-                    console.log('before')
-                },
-                after:function(){
-                    self.build();
-                }
-            });
-            return this;
-        }
-
-        this.el.attr('data-provide','blog')
-        return this.init();
-    };
-
-    $.fn.blogs = function(options){
-        if(!$(this).length)
-        return $(this);
-        var blogs = new Blogs($(this),options);
-		$(this).data('blogs', blogs);
-		return blogs;
-    }
-
-    /*
-    *   Required classes on the template:
-    *   .name, .content, .email, .date
-    */
-    var Comments = function(el){
-        this.template   = el;
-        this.base       = $('#content_dvBlogComments_ICell .BlogCommentItem');
-        this.data       = [];
-
-        this.getContents = function(){
-            var self = this;
-            this.base.each(function(){
-                self.data.push({
-                    name:    $(this).find('.CommentTitle').text(),
-                    email:   $(this).find('.CommentEmail').text(),
-                    date:    $(this).find('.CommentAddedDate').text(),
-                    content: $(this).find('.CommentText').text()
-                })
-            });
-            return this.data;
-        }
-
-        this.build = function(){
-            var self = this;
-            $.each(self.getContents(),function(x,v){
-                var comment = self.template.clone();
-                comment.find('.name').text(v.name);
-                comment.find('.content').text(v.content);
-                comment.find('.email').text(v.email);
-                comment.find('.date').text(v.date);
-                comment.insertAfter(self.template);
-            });
-            this.template.hide();
-            return this;
-        }
-        return this;
-    }
-
-    $.fn.comments = function(){
-        var comments = new Comments($(this));
-        comments.build();
-		$(this).data('comments', comments);
-		return comments;
-    }
-
-    /*
-    *   Category
-    */
-    class Category{
-        constructor(el,options){
-            this.target = el;
-            this.wrap = el.parent('ul');
-            this.settings = {
-                tree: false,
-                tmplt: $('<li> <a href="#">text</a> <span class="badge count">0</span> <button type="button" class="btn btn-default"><i class="fa fa-angle-right"></i></button></li>'),
-                childTmplt: $('<li><a href="#">text</a></li>'),
-                childWrap: $('<ul class="collapse in">')
-            };
-            if (options) {
-                $.extend(this.settings, options);
-            }
-            if(el.length)
-            return this.init();
-        }
-    
-        init(){
-            var self    = this;
-            var tmp     = [];
-            this.tmplt  = this.settings.tmplt;
-            this.create();
-            this.target.remove();
-    
-            $('#content_ASPxTreeList1_U').on('DOMSubtreeModified',function(){
-                /* prevents multiple call */
-                tmp.push($(this).find('tbody').length)
-                var l = tmp.length;
-                if(tmp[l-1]==1 && tmp[l-2]==0){
-                    tmp = [];
-                    self.update();
-                }
-            });
-    
-            return this;
-        }
-    
-        update(){
-            var self = this;
-            var data = this.getData();
-            var plist = this.wrap.find('>li');
-      
-            $.each(data,function($i, $item){
-                if((plist.eq($i).find('ul').length==0) && ($item.child.length>0)){
-                    var ulHtm = self.childHtm($item.child,plist.eq($i).find('button').data('target'));
-                    var parentLi = plist.eq($i);
-                    var btn = parentLi.find('button');
-                    parentLi.append( ulHtm );
-                    btn.prop('disabled',false);
-                }
-            });
-            // return wrap;
-        }
-    
-        create(){
-            var self = this;
-            var data = this.getData();
-            self.wrap.html('');
-    
-            $.each(data,function($index, $item) {
-                var hash    = self.hash();
-                var li      = self.tmplt.clone();
-                var parent  = $($item.parent);
-                var count   = $item.parent.nextSibling.nodeValue.replace(/[()]/g, '').replace(/\s/g,'') ;
-                li.find('a').attr('href',parent.attr('href'));
-                li.find('a').contents()[0].nodeValue = parent.text();
-                li.find('.count').text(count);
-                li.find('button').attr('data-toggle','collapse').attr('data-target',hash).attr('data-index',$index)
-                li.find('button').on('click',function(){
-                    self.expand($(this))
-                });
-                li.removeAttr('style');
-                if($item.child.length){
-                    li.append(self.childHtm($item.child,hash));
-                }
-                self.wrap.append(li);
-            });
-        }
-    
-        childHtm($item,hash){
-            var self = this;
-            var wrap = this.settings.childWrap.clone();
-            wrap.addClass('collapse').attr('id',hash);
-            $.each($item,function($i, $item){
-                var an = $($item);
-                var li = self.settings.childTmplt.clone();
-                li.find('a').attr('href',an.attr('href'));
-                li.find('a').text(an.text());
-                wrap.append(li);
-            });
-            return wrap;
-        }
-    
-        expand($el){
-            if($el.next().is('.collapse')){
-                $('#'+$el.data('target')).collapse('toggle');
-            }else{
-                $($('#content_ASPxTreeList1_U img')[$el.data('index')]).click();
-                $el.prop('disabled',true);
-            }
-        }
-    
-        getData(){
-            var isChild = function(el){ return el.is('tr[id*="content_ASPxTreeList1_R-B"]'); };
-            var isParent = function(el){ return !isChild(el); }
-            var target = $('#content_ASPxTreeList1_D tr[id*="content_ASPxTreeList1_R-"]');
-            var list = [];
-            target.each(function(){
-                if( isParent($(this)) ){
-                    list.push({
-                        parent: $(this).find('a[href]').get(0),
-                        child: [],
-                        button: $(this).find('.dxtl__Expand')
-                    })
-                }else if( isChild($(this)) ){
-                    
-                    list[list.length-1].child.push($(this).find('a[href]').get(0))
-                }
-            });
-            return list;
-        }
-    
-        hash(){
-            var text = "";
-            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            for (var i = 0; i < 8; i++)
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-            return text;
-        }
-    }
-    $.fn.category = function(opt){
-        return new Category($(this),opt);
-    }
-    $(document).on('ready',function(){
-        $('[data-provide="category"]').category();
-    })
-
-
-    /*
-    *   Archive
-    */
-    var Archive = function(el){
-        $('#content_ASPxRoundPanel2_RPC a').each(function(){
-            var item = el.clone();
-            item.find('a')
-                .attr('href',$(this).attr('href'))
-                .text($(this).text())
-            item.insertAfter(el);
-            item.show();
-        });
-        el.remove();
-        return this;
-    }
-
-    $.fn.archive = function(){
-        return new Archive($(this));
     }
 })(jQuery);
 
@@ -1779,5 +1433,696 @@
     $(document).ready(function(){
         $('[data-provide="review-pager"]').reviewPager();
         $('[data-provide="review"]').review();
+    });
+})(jQuery);
+
+
+/*
+*   Ref: https://sites.google.com/site/tomihasa/google-language-codes
+*/
+(function(w,$){
+    "use strict";
+    var self,settings;
+
+    self = function(options){
+        settings = $.extend({
+            // default options.
+            default:'en',
+            lang: ['en','fr','de','es','pt-BR','zh-CN','no','da','sv'],
+            languages: {
+                'af': 'Afrikaans',
+                'ak': 'Akan',
+                'sq': 'Albanian',
+                'am': 'Amharic',
+                'ar': 'Arabic',
+                'hy': 'Armenian',
+                'az': 'Azerbaijani',
+                'eu': 'Basque',
+                'be': 'Belarusian',
+                'bem': 'Bemba',
+                'bn': 'Bengali',
+                'bh': 'Bihari',
+                'bs': 'Bosnian',
+                'br': 'Breton',
+                'bg': 'Bulgarian',
+                'km': 'Cambodian',
+                'ca': 'Catalan',
+                'chr': 'Cherokee',
+                'ny': 'Chichewa',
+                'zh-CN': 'Chinese',
+                // 'zh-TW': 'Chinese (Traditional)',
+                'co': 'Corsican',
+                'hr': 'Croatian',
+                'cs': 'Czech',
+                'da': 'Danish',
+                'nl': 'Dutch',
+                'en': 'English',
+                'eo': 'Esperanto',
+                'et': 'Estonian',
+                'ee': 'Ewe',
+                'fo': 'Faroese',
+                'tl': 'Filipino',
+                'fi': 'Finnish',
+                'fr': 'French',
+                'fy': 'Frisian',
+                'gaa': 'Ga',
+                'gl': 'Galician',
+                'ka': 'Georgian',
+                'de': 'German',
+                'el': 'Greek',
+                'gn': 'Guarani',
+                'gu': 'Gujarati',
+                'ht': 'Haitian Creole',
+                'ha': 'Hausa',
+                'haw': 'Hawaiian',
+                'iw': 'Hebrew',
+                'hi': 'Hindi',
+                'hu': 'Hungarian',
+                'is': 'Icelandic',
+                'ig': 'Igbo',
+                'id': 'Indonesian',
+                'ia': 'Interlingua',
+                'ga': 'Irish',
+                'it': 'Italian',
+                'ja': 'Japanese',
+                'jw': 'Javanese',
+                'kn': 'Kannada',
+                'kk': 'Kazakh',
+                'rw': 'Kinyarwanda',
+                'rn': 'Kirundi',
+                'kg': 'Kongo',
+                'ko': 'Korean',
+                'kri': 'Krio (Sierra Leone)',
+                'ku': 'Kurdish',
+                'ckb': 'Kurdish (Soranî)',
+                'ky': 'Kyrgyz',
+                'lo': 'Laothian',
+                'la': 'Latin',
+                'lv': 'Latvian',
+                'ln': 'Lingala',
+                'lt': 'Lithuanian',
+                'loz': 'Lozi',
+                'lg': 'Luganda',
+                'ach': 'Luo',
+                'mk': 'Macedonian',
+                'mg': 'Malagasy',
+                'ms': 'Malay',
+                'ml': 'Malayalam',
+                'mt': 'Maltese',
+                'mi': 'Maori',
+                'mr': 'Marathi',
+                'mfe': 'Mauritian Creole',
+                'mo': 'Moldavian',
+                'mn': 'Mongolian',
+                'ne': 'Nepali',
+                'pcm': 'Nigerian Pidgin',
+                'nso': 'Northern Sotho',
+                'no': 'Norwegian',
+                'nn': 'Norwegian (Nynorsk)',
+                'oc': 'Occitan',
+                'or': 'Oriya',
+                'om': 'Oromo',
+                'ps': 'Pashto',
+                'fa': 'Persian',
+                'pl': 'Polish',
+                // 'pt-BR': 'Portuguese (Brazil)',
+                'pt-PT': 'Portuguese',
+                'pa': 'Punjabi',
+                'qu': 'Quechua',
+                'ro': 'Romanian',
+                'rm': 'Romansh',
+                'nyn': 'Runyakitara',
+                'ru': 'Russian',
+                'gd': 'Scots Gaelic',
+                'sr': 'Serbian',
+                'sh': 'Serbo-Croatian',
+                'st': 'Sesotho',
+                'tn': 'Setswana',
+                'crs': 'Seychellois Creole',
+                'sn': 'Shona',
+                'sd': 'Sindhi',
+                'si': 'Sinhalese',
+                'sk': 'Slovak',
+                'sl': 'Slovenian',
+                'so': 'Somali',
+                'es': 'Spanish',
+                'es-419': 'Spanish (Latin American)',
+                'su': 'Sundanese',
+                'sw': 'Swahili',
+                'sv': 'Swedish',
+                'tg': 'Tajik',
+                'ta': 'Tamil',
+                'tt': 'Tatar',
+                'te': 'Telugu',
+                'th': 'Thai',
+                'ti': 'Tigrinya',
+                'to': 'Tonga',
+                'lua': 'Tshiluba',
+                'tum': 'Tumbuka',
+                'tr': 'Turkish',
+                'tk': 'Turkmen',
+                'tw': 'Twi',
+                'ug': 'Uighur',
+                'uk': 'Ukrainian',
+                'ur': 'Urdu',
+                'uz': 'Uzbek',
+                'vi': 'Vietnamese',
+                'cy': 'Welsh',
+                'wo': 'Wolof',
+                'xh': 'Xhosa',
+                'yi': 'Yiddish',
+                'yo': 'Yoruba',
+                'zu': 'Zulu'
+            }
+        }, options );
+
+        self.init();
+        $(this).after(self.build());
+        $(this).remove();
+        self.events();
+        self.css();
+        return self;
+    };
+
+    self.helper = {
+        strRand: function(){
+            return Math.random().toString(30).substring(7);
+        },
+        toTitleCase: function(str) {
+            var lcStr = str.toLowerCase();
+            return lcStr.replace(/(?:^|\s)\w/g, function(match) {
+                return match.toUpperCase();
+            });
+        }
+    };
+
+    self.init = function(){
+        if($('iframe.goog-te-menu-frame').length)
+            console.log('Google translator already loaded!')
+        else
+        {
+            self.wrapper = $('<div id="googleTranslator"></div>').hide();
+            $("body").append(self.wrapper);
+            w.gTransInit = function(){``
+                new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, autoDisplay: false}, 'googleTranslator');
+            }
+            $.getScript('//translate.google.com/translate_a/element.js?cb=gTransInit')
+        }
+
+        $(window).load(function() {
+            setTimeout(function() {
+                self.updateLabel()
+            }, 2000);
+        });
+
+        return this
+    };
+
+    self.events = function(){
+        $(".translation-links a").click(function (){
+            // var lang = $(this).data("lang");
+            var lang = $(this).text();
+            var n = $(".goog-te-menu-frame:first");
+            setTimeout(function() {
+                self.updateLabel()
+            }, 800);
+            return n.length ? (n.contents().find(".goog-te-menu2-item span.text:contains(" + lang + ")").get(0).click(), !1) : (alert("Error: Could not find Google translate frame."), !1)
+        });
+    }
+
+    self.build = function(){
+        var $htm = $(`<div class="dropdown lang-menu translation-links notranslate">
+            <button class="dropdown-toggle btn btn-default btn-sm" type="button" id="googleTranslateDrop" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true">EN<i class="icon ion-chevron-down"></i></button><ul class="dropdown-menu" aria-labelledby="googleTranslateDrop"></ul>
+        </div>`);
+        var $list = '<li><a href="#" data-lang="{{lang}}">{{label}}</a></li>';
+        var $ul = $htm.find('ul');
+        $ul.on('updatedList',function ( event, data ) {
+            var list = $.map( data, function ( v ) {
+                return $list.replace( /{{label}}/, v.label ).replace( /{{lang}}/, v.lang );
+            });
+            $ul.html(list);
+        })
+        $ul.trigger( "updatedList", [self.getLang()]);
+        this.plugin = $htm;
+        return $htm;
+    }
+
+    self.getLang = function(){
+        var Lang = null;
+        if(settings.lang.constructor===Array)
+            Lang = $.map(settings.lang,function(v){
+                return {
+                    lang:v,
+                    label:settings.languages[v]
+                };
+            })
+        else if(settings.lang.constructor===Object)
+            Lang = $.map(settings.lang,function(v,k){
+                return {
+                    lang: settings.languages[k],
+                    label: v
+                };
+            })
+        return Lang;
+    }
+
+    self.setLang = function(lang){
+        lang = lang.toLowerCase();
+        lang = settings.languages[lang];
+        var n = $(".goog-te-menu-frame:first");
+        var el = n.contents().find(".goog-te-menu2-item span.text:contains(" + lang + ")").get(0);
+        if(typeof el !="undefined"){
+            return n.length ? (el.click(), !1) : (alert("Error: Could not find Google translate frame."), !1);
+        }
+        console.log('Language not found!')
+    }
+
+    self.getCurrentLang = function(){
+        var getKeyByValue = function (object, value) {
+            return Object.keys(object).find(key => object[key] === value);
+        }
+        return getKeyByValue(settings.languages,$(".goog-te-menu-value span:first").text());
+    }
+
+    self.updateLabel = function(){
+        if($(".goog-te-menu-value span:first").text()=="Select Language")
+        return false;
+        
+        var label = settings.languages[self.getCurrentLang()];
+        this.plugin.find(".dropdown-toggle").contents().first()[0].textContent = label;
+        this.plugin.find('ul li').removeClass('active');
+        this.plugin.find( "a:contains('"+label+"')" ).parents('li').addClass('active');
+    }
+
+    self.css = function(){
+        $("body").append($(`
+        <style id=`+self.helper.strRand()+`>
+            .goog-te-banner-frame.skiptranslate {display: none !important;} 
+            body {top: 0px !important;position: inherit!important;}
+        </style>`));
+
+        return this;
+    }
+
+    $.fn.googleTranslate = self;
+
+    return this;
+})(window,jQuery);
+
+
+/*
+*   Blog Helper
+*/
+(function($){
+    /*
+    *   Use this template: <nav class="pagination"> or create custom
+    */
+    var Paginate = function(el,opt){
+        this.el         = el;
+        this.$base      = $('[class*="dxdvPagerPanel_"]').first();
+        this.options    = $.extend({
+            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(`content_Blog2`, `PBF`)"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(`content_Blog2`, `PBP`)"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(`content_Blog2`, `PBN`)"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(`content_Blog2`, `PBL`)"> <span>&raquo;</span> </a></li></ul>'
+        }, opt );
+
+        this.process = function(){
+            var btnBase  = this.$base.find('.dxpLite_PlasticBlue').first().find('.dxp-button');
+            var template = $(this.options.paginationTemplate);
+            var firstP   = $(btnBase[0]);
+            var prev     = $(btnBase[1]);
+            var next     = $(btnBase[3]);
+            var lastP    = $(btnBase[2]);
+
+            if(firstP.is('.dxp-disabledButton'))
+            template.find('.first').removeAttr('onclick').closest('li').addClass("disabled");
+            if(prev.is('.dxp-disabledButton'))
+            template.find('.prev').removeAttr('onclick').closest('li').addClass("disabled");
+            if(next.is('.dxp-disabledButton'))
+            template.find('.next').removeAttr('onclick').closest('li').addClass("disabled");
+            if(lastP.is('.dxp-disabledButton'))
+            template.find('.last').removeAttr('onclick').closest('li').addClass("disabled");
+
+            // Set summary
+            template.find('span.label').text(this.getSummary());
+            template.on("click",function(e){e.preventDefault();});
+
+            $(this.options.pagination).html("");
+
+            if(this.getSummary()!="Page 1 of 1")
+            return this.el.append(template);
+        };
+        this.getSummary = function(){
+            return this.$base.find('.dxp-summary').first().text();
+        };
+        this.build = function(){
+            this.el.html("");
+            this.process();
+        };
+    };
+    $.fn.paginate = function(options){
+        if(!$(this).length)
+        return $(this);
+        var paginate = new Paginate($(this),options);
+        paginate.build();
+
+		$(this).data('paginate', paginate);
+		return paginate;
+    };
+    $(document).on('ready',function(){
+        $('[data-provide="paginate"]').paginate();
+    });
+
+    /*
+    *   Classes needed in the template:
+    *   .title, .date, .category, .content, .url
+    */
+    var Blog = function(el,opt){
+        this.el         = el;
+        this.$base      = $('#content_Blog2_CCell');
+        this.options    = $.extend({
+            pagination: null,
+            onContentRender: function(el){}
+        }, opt );
+
+        // Initilize pagination
+        this.paginate = new Paginate(this.options.pagination);
+        this.el.hide();
+
+        this.getContents = function(){
+            var contents = [];
+            $('#content_Blog2_ICell .bodyText').each(function(){
+                $(this).find('[id*="blogMainContainer"] p').filter(function () { return $.trim(this.innerHTML) == "" }).remove();
+                var content = $(this).find('[id*="blogMainContainer"] tr').not(':first-child').text();
+
+                contents.push({
+                    title: $(this).find('a>h1').text(),
+                    date: $(this).find('.dateAdded').text(),
+                    category: $(this).find('.blogCatagoryID').text(),
+                    content: content,
+                    url: $(this).find('.blogLink').attr('href')
+                });
+            });
+            return contents;
+        };
+        this.build = function(){
+            var self = this;
+            this.clear();
+            // Build contents
+            $.each(this.getContents().reverse(),function(x,v){
+                var cloneTemplate = self.el.clone();
+                cloneTemplate.find('.title').text(v.title);
+                cloneTemplate.find('.date').text(v.date);
+                cloneTemplate.find('.category').text(v.category);
+                cloneTemplate.find('.content').html($('<p>').text(v.content.replace("Read More","")));
+                cloneTemplate.find('.url').attr('href',v.url);
+                cloneTemplate.removeAttr('style');
+                cloneTemplate.insertAfter(self.el);
+                self.options.onContentRender(cloneTemplate);
+
+                if(cloneTemplate.find('.title').closest('a'))
+                cloneTemplate.find('.title').closest('a').attr('href',v.url);
+            });
+            return this;
+        };
+        this.clear = function(){
+            this.el.nextAll().remove();
+            return this;
+        };
+        this.init = function(){
+            var self = this;
+            this.build();
+            this.$base.observe({
+                before:function(){
+                    console.log('before');
+                },
+                after:function(){
+                    self.build();
+                }
+            });
+            return this;
+        };
+
+        this.el.attr('data-provide','blog');
+        return this.init();
+    };
+    $.fn.blog = function(options){
+        if(!$(this).length)
+        return $(this);
+        var blog = new Blog($(this),options);
+		$(this).data('blog', blog);
+		return blog;
+    };
+    $(document).on('ready',function(){
+        $('[data-provide="blog"]').blog();
+    });
+
+    /*
+    *   Required classes on the template:
+    *   .name, .content, .email, .date
+    */
+    var Comments = function(el){
+        this.template   = el;
+        this.base       = $('#content_dvBlogComments_ICell .BlogCommentItem');
+        this.data       = [];
+
+        this.getContents = function(){
+            var self = this;
+            this.base.each(function(){
+                self.data.push({
+                    name:    $(this).find('.CommentTitle').text(),
+                    email:   $(this).find('.CommentEmail').text(),
+                    date:    $(this).find('.CommentAddedDate').text(),
+                    content: $(this).find('.CommentText').text()
+                });
+            });
+            return this.data;
+        };
+
+        this.build = function(){
+            var self = this;
+            $.each(self.getContents(),function(x,v){
+                var comment = self.template.clone();
+                comment.find('.name').text(v.name);
+                comment.find('.content').text(v.content);
+                comment.find('.email').text(v.email);
+                comment.find('.date').text(v.date);
+                comment.insertAfter(self.template);
+            });
+            this.template.hide();
+            return this;
+        };
+        return this;
+    };
+
+    $.fn.comments = function(){
+        var comments = new Comments($(this));
+        comments.build();
+		$(this).data('comments', comments);
+		return comments;
+    };
+
+    /*
+    *   Category
+    */
+    var Category = function(el,options){
+        if(!el.length)
+        return this;
+
+        this.target = el;
+        this.wrap = el.parent('ul');
+        this.settings = {
+            tree: false,
+            tmplt: $('<li> <a href="#">text</a> <span class="badge count">0</span> <button type="button" class="btn btn-xs btn-default"><i class="fa fa-angle-right"></i></button></li>'),
+            childTmplt: $('<li><a href="#">text</a></li>'),
+            childWrap: $('<ul class="collapse in">')
+        };
+        if (options) {
+            $.extend(this.settings, options);
+        }
+
+        this._event = {
+            "collapse": [],
+            "collapse.shown": [],
+            "collapse.hide": [],
+            "listing" : []
+        };
+
+        this.init = function(){
+            var self    = this;
+            var tmp     = [];
+            this.tmplt  = this.settings.tmplt;
+            this.create();
+            this.target.remove();
+    
+            $('#content_ASPxTreeList1_U').on('DOMSubtreeModified',function(){
+                /* prevents multiple call */
+                tmp.push($(this).find('tbody').length);
+                var l = tmp.length;
+                if(tmp[l-1]==1 && tmp[l-2]==0){
+                    tmp = [];
+                    self.update();
+                }
+            });
+
+            this.on('collapse.shown',function(el){
+                el.prev().find('.fa').removeClass('fa-angle-right').addClass('fa-angle-down');
+            }).on('collapse.hide',function(el){
+                el.prev().find('.fa').removeClass('fa-angle-down').addClass('fa-angle-right');
+            });
+    
+            return this;
+        };
+    
+        this.update = function(){
+            var self = this;
+            var data = this.getData();
+            var plist = this.wrap.find('>li');
+      
+            $.each(data,function($i, $item){
+                if((plist.eq($i).find('ul').length==0) && ($item.child.length>0)){
+                    var ulHtm = self.childHtm($item.child,plist.eq($i).find('button').data('target'));
+                    var parentLi = plist.eq($i);
+                    var btn = parentLi.find('button');
+                    parentLi.append( ulHtm );
+                    btn.prop('disabled',false);
+
+                    self.trigger('collapse.shown',ulHtm);
+                    ulHtm.on('shown.bs.collapse',function(){
+                        self.trigger('collapse.shown',$(this));
+                    }).on('hide.bs.collapse',function(){
+                        self.trigger('collapse.hide',$(this));
+                    });
+                }
+            });
+            // return wrap;
+        };
+    
+        this.create = function(){
+            var self = this;
+            var data = this.getData();
+            self.wrap.html('');
+    
+            $.each(data,function($index, $item) {
+                var hash    = self.hash();
+                var li      = self.tmplt.clone();
+                var parent  = $($item.parent);
+                var count   = $item.parent.nextSibling.nodeValue.replace(/[()]/g, '').replace(/\s/g,'') ;
+                var btnCollapse = li.find('button');
+                li.find('a').attr('href',parent.attr('href'));
+                li.find('a').contents()[0].nodeValue = parent.text();
+                li.find('.count').text(count);
+                btnCollapse.attr('data-toggle','collapse').attr('data-target',hash).attr('data-index',$index);
+                btnCollapse.on('click',function(){
+                    self.expand($(this));
+                });
+                li.removeAttr('style');
+                if($item.child.length){
+                    li.append(self.childHtm($item.child,hash));
+                }
+
+                self.wrap.append(li);
+            });
+        };
+    
+        this.childHtm = function($item,hash){
+            var self = this;
+            var wrap = this.settings.childWrap.clone();
+            wrap.addClass('collapse').attr('id',hash);
+            $.each($item,function($i, $item){
+                var an = $($item);
+                var li = self.settings.childTmplt.clone();
+                li.find('a').attr('href',an.attr('href'));
+                li.find('a').text(an.text());
+                wrap.append(li);
+            });
+            return wrap;
+        };
+    
+        this.expand = function($el){
+            var self = this;
+            this.trigger('collapse',$el);
+            if($el.next().is('.collapse')){
+                $('#'+$el.data('target')).collapse('toggle');
+            }else{
+                $($('#content_ASPxTreeList1_U img')[$el.data('index')]).click();
+                $el.prop('disabled',true);
+            }
+            return this;
+        };
+    
+        this.getData = function(){
+            var isChild = function(el){ return el.is('tr[id*="content_ASPxTreeList1_R-B"]'); };
+            var isParent = function(el){ return !isChild(el); };
+            var target = $('#content_ASPxTreeList1_D tr[id*="content_ASPxTreeList1_R-"]');
+            var list = [];
+            target.each(function(){
+                if( isParent($(this)) ){
+                    list.push({
+                        parent: $(this).find('a[href]').get(0),
+                        child: [],
+                        button: $(this).find('.dxtl__Expand')
+                    });
+                }else if( isChild($(this)) ){
+                    
+                    list[list.length-1].child.push($(this).find('a[href]').get(0));
+                }
+            });
+            return list;
+        };
+    
+        this.hash = function(){
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for (var i = 0; i < 8; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+            return text;
+        };
+
+        this.on = function(eventName, fn){
+            this._event[eventName].push(fn);
+            return this;
+        }
+
+        this.trigger = function(e,param){
+            var x;
+            $(this._event[e]).each(function(i,fn){
+                x = fn(param);
+            });
+            return x;
+        };
+
+        return this.init();
+    }
+    $.fn.category = function(opt){
+        var el = $(this);
+        var wrap = el.parent();
+        var cat = new Category(el,opt);
+        wrap.data('category',cat);
+        return cat;
+    };
+    $(document).on('ready',function(){
+        $('[data-provide="category"]').category();
+    });
+
+
+    /*
+    *   Archive
+    */
+    var Archive = function(el){
+        $('#content_ASPxRoundPanel2_RPC a').each(function(){
+            var item = el.clone();
+            item.find('a')
+                .attr('href',$(this).attr('href'))
+                .text($(this).text());
+            item.insertAfter(el);
+            item.show();
+        });
+        el.remove();
+        return this;
+    };
+    $.fn.archive = function(){
+        return new Archive($(this));
+    };
+    $(document).on('ready',function(){
+        $('[data-provide="archive"]').archive();
     });
 })(jQuery);
