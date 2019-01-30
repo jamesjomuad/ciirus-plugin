@@ -1931,7 +1931,7 @@
         this.wrap = el.parent('ul');
         this.settings = {
             tree: false,
-            tmplt: $('<li> <a href="#">text</a> <span class="badge count">0</span> <button type="button" class="btn btn-xs btn-default"><i class="fa fa-angle-right"></i></button></li>'),
+            tmplt: $('<li> <a href="#">text</a> <span class="badge count">0</span> <button type="button" class="btn btn-xs btn-default"><i class="fa fa-plus"></i></button> </li>'),
             childTmplt: $('<li><a href="#">text</a></li>'),
             childWrap: $('<ul class="collapse in">')
         };
@@ -1964,9 +1964,9 @@
             });
 
             this.on('collapse.shown',function(el){
-                el.prev().find('.fa').removeClass('fa-angle-right').addClass('fa-angle-down');
+                el.prev().find('.fa').removeClass('fa-plus').addClass('fa-minus');
             }).on('collapse.hide',function(el){
-                el.prev().find('.fa').removeClass('fa-angle-down').addClass('fa-angle-right');
+                el.prev().find('.fa').removeClass('fa-minus').addClass('fa-plus');
             });
     
             return this;
