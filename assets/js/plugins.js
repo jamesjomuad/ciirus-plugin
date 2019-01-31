@@ -97,24 +97,24 @@
 
 /*
 *   Newsletter
+*   Fields: [name="name"], [name="email"], #submit
 */
 (function(w,$){
-    $.fn.newsletter = function(){
-        function Newsletter(){}
-        var self = Newsletter.prototype;
+    function Newsletter(el){
+        var self = this;
         var error = false;
 
         if(typeof self.frame != "undefined")
         return self;
 
-        self.el = $(this);
+        self.el = el;
         self.field = {
             name: self.el.find('[name="name"]'),
             email: self.el.find('[name="email"]'),
             button: self.el.find('#submit'),
         };
 
-        self.frame = $('<iframe/>',{src: "/EmbedMailingList.aspx"});
+        self.frame = $('[src="/EmbedMailingList.aspx"]').length ? $('[src="/EmbedMailingList.aspx"]') : $('<iframe/>',{src: "/EmbedMailingList.aspx"});
         self.frame.hide();
 
         self.setError = function(el){
@@ -134,13 +134,16 @@
         }
 
         self.isValid = function(){
-            if(self.field.name.val()){
-                self.clearError(self.field.name)
-                error = false;
-            }else{
-                self.setError(self.field.name)
-                error = true;
+            if(self.field.name.length){
+                if(self.field.name.val()){
+                    self.clearError(self.field.name)
+                    error = false;
+                }else{
+                    self.setError(self.field.name)
+                    error = true;
+                }
             }
+            
             
             var pattern = /^([\w-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([\w-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$/;
             if($.trim(self.field.email.val()).match(pattern)){
@@ -172,19 +175,29 @@
                 self.frame.contents().find('#txtEmail_I').val(self.field.email.val());
             });
             self.field.button.on('click',function(){
+                self.el.trigger("before");
                 self.submit();
             });
             
             if(self.frame.contents().find('body').text().indexOf("Thank you")>1){
-                self.el.trigger( "success");
+                self.el.trigger("success");
                 self.reset(self.field.name).reset(self.field.email);
                 self.frame.remove();
             }
         });
 
-        $('body').append(self.frame);
+        if(!$('[src="/EmbedMailingList.aspx"]').length){
+            $('body').append(self.frame);
+        }
         return self.el;
     }
+    
+    $.fn.newsletter = function(){
+        var newsletter = new Newsletter($(this));
+        $(this).data('newsletter',newsletter);
+        return newsletter;
+    }
+
 })(window,jQuery);
 
 
@@ -1066,11 +1079,15 @@
             var self = this;
 
             if(this.element){
+                this.wrap = $('<div>',{id:('review_'+this.hash()+this.hash().toLowerCase())})
+                .insertBefore(this.element)
+                .append(this.element);
                 if(!this.isEmpty()){
-                    this.wrap = $('<div>',{id:('review_'+this.hash()+this.hash().toLowerCase())})
-                    .insertBefore(this.element)
-                    .append(this.element);
                     this.build();
+                }else{
+                    var msg = $('#content_descriptions1_GuestReviews1_Reviews_CCell .dxdvEmptyData_DevEx').text();
+                    var info = $('<div>').addClass("well text-info text-center").html($('<b>').text(msg));
+                    this.element.html(info);
                 }
             }
 
@@ -1557,13 +1574,15 @@
             var contents = [];
             $('#content_Blog2_ICell .bodyText').each(function(){
                 $(this).find('[id*="blogMainContainer"] p').filter(function () { return $.trim(this.innerHTML) == "" }).remove();
-                var content = $(this).find('[id*="blogMainContainer"] tr').not(':first-child').text();
+
+                var content = $(this).find('[id*="blogMainContainer"] tr').not(':first-child').find('td').clone();
+                content.find('a.blogLink').remove();
 
                 contents.push({
                     title: $(this).find('a>h1').text(),
                     date: $(this).find('.dateAdded').text(),
                     category: $(this).find('.blogCatagoryID').text(),
-                    content: content,
+                    content: content.contents(),
                     url: $(this).find('.blogLink').attr('href')
                 });
             });
@@ -1578,7 +1597,7 @@
                 cloneTemplate.find('.title').text(v.title);
                 cloneTemplate.find('.date').text(v.date);
                 cloneTemplate.find('.category').text(v.category);
-                cloneTemplate.find('.content').html($('<p>').text(v.content.replace("Read More","")));
+                cloneTemplate.find('.content').html( v.content );
                 cloneTemplate.find('.url').attr('href',v.url);
                 cloneTemplate.removeAttr('style');
                 cloneTemplate.insertAfter(self.el);
@@ -1622,8 +1641,8 @@
     });
 
     /*
-    *   Required classes on the template:
-    *   .name, .content, .email, .date
+    *   Classes on the template:
+    *   .name, .content, .email, .date, .alias
     */
     var Comments = function(el){
         this.template   = el;
@@ -1634,6 +1653,7 @@
             var self = this;
             this.base.each(function(){
                 self.data.push({
+                    alias:   $(this).find('.CommentTitle').text()[0].toUpperCase(),
                     name:    $(this).find('.CommentTitle').text(),
                     email:   $(this).find('.CommentEmail').text(),
                     date:    $(this).find('.CommentAddedDate').text(),
@@ -1647,6 +1667,7 @@
             var self = this;
             $.each(self.getContents(),function(x,v){
                 var comment = self.template.clone();
+                comment.find('.alias').text(v.alias);
                 comment.find('.name').text(v.name);
                 comment.find('.content').text(v.content);
                 comment.find('.email').text(v.email);
@@ -1658,13 +1679,15 @@
         };
         return this;
     };
-
     $.fn.comments = function(){
         var comments = new Comments($(this));
         comments.build();
 		$(this).data('comments', comments);
 		return comments;
     };
+    $(document).on('ready',function(){
+        $('[data-provide="comments"]').comments();
+    });
 
     /*
     *   Category
