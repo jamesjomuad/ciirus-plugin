@@ -111,7 +111,7 @@
         self.field = {
             name: self.el.find('[name="name"]'),
             email: self.el.find('[name="email"]'),
-            button: self.el.find('#submit'),
+            button: self.el.find('button'),
         };
 
         self.frame = $('[src="/EmbedMailingList.aspx"]').length ? $('[src="/EmbedMailingList.aspx"]') : $('<iframe/>',{src: "/EmbedMailingList.aspx"});
@@ -154,6 +154,10 @@
                 error = true;
             }
 
+            if(!error){
+                self.field.button.prop("disabled",false);
+            }
+
             return !error;
         }
 
@@ -189,15 +193,13 @@
         if(!$('[src="/EmbedMailingList.aspx"]').length){
             $('body').append(self.frame);
         }
-        return self.el;
+        return this;
     }
-    
     $.fn.newsletter = function(){
         var newsletter = new Newsletter($(this));
         $(this).data('newsletter',newsletter);
-        return newsletter;
+        return $(this);
     }
-
 })(window,jQuery);
 
 
@@ -385,27 +387,78 @@
 /* 
 *   Details Page Calendar 
 */
-(function ( $, window, document, undefined ) {
+;(function($,window,document,undefined){
+    function Calendar(){
+        this.base = '#content_descriptions1_availability1_ASPxCalendar1 [style*="calIcons"]';
+        this.bg = [];
+        this.key = {};
+        this.legends = {
+            "744bb3be2ecd09d260b8be93b9a0ae86":'reserve',
+            "9ca1c35177ccdc4842d525a88a14aec7":'arrive',
+            "bf4fc138c750ddbe1c7f2c23b40e5268":'depart',
+            "a381c9e57f6ff7052816ec489e3f4cc0":'departArrive'
+        };
 
-    // Constructor
-    function Calendar() {
-        this.name = "Calendar";
-        this.version = "3.0.0";
-        if(jQuery.isEmptyObject(Calendar.prototype.tmp)){
-            $(document).on('click','#content_descriptions1_availability1_ASPxCalendar1 [onclick*="aspxCalShiftMonth"]',function(){
-                setTimeout(function(){
-                    Calendar.prototype.addClass();
-                }, 800);
+        this.init = function(){
+            var self = this;
+            this.setBg();
+            this.analyse(function(d){
+                console.log(self.key);
+                self.setClasses();
             });
-            Calendar.prototype.addClass();
+            return this;
+        };
+        this.analyse = function(fn){
+            var self = this;
+            var xhrs = [];
+            $.each(this.bg,function(i,ii){
+                var xhr = self.base64(ii,function(data){
+                    self.key[ii] = self.legends[self.md5(data)];
+                    xhrs.pop();
+                    if(xhrs.length==0)
+                    fn(self.key);
+                });
+                xhrs.push(xhr);
+            });
+        };
+        this.setClasses = function(){
+            var self = this;
+            var target = $(this.base);
+            target.each(function(){
+                var klass = self.key[self.getBg($(this))];
+                $(this).find('tbody>tr>td').addClass(klass);
+            });
         }
-        return Calendar.prototype;
-    };
-    Calendar.prototype = {
-        constructor: Calendar,
-        data: {},
-        tmp: {},
-        md5: function(d){
+        this.setBg = function(){
+            var self = this;
+            // get all bg
+            $(this.base).each(function(){
+                self.bg.push($(this).css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'').split('?')[0]);
+            });
+            this.bg = this.arrUniq(this.bg);
+        };
+        this.getBg = function(el){
+            return el.css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'').split('?')[0];
+        };
+        this.arrUniq = function(arr){
+            return arr.filter((v, i, a) => a.indexOf(v) === i);
+        };
+        this.base64 = function (url,fn) {
+            var self = this;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.responseType = 'blob';
+            xhr.send(); 
+            xhr.onload = function () {
+                var reader = new FileReader();
+                reader.readAsDataURL(xhr.response);
+                reader.onloadend = function(){
+                    fn(reader.result);
+                };
+            };
+            return xhr;
+        }
+        this.md5 = function(d){
             function M(d) {
                 for (var _, m = "0123456789ABCDEF", f = "", r = 0; r < d.length; r++) _ = d.charCodeAt(r), f += m.charAt(_ >>>
                     4 & 15) + m.charAt(15 & _);
@@ -517,101 +570,11 @@
             }
             result = M(V(Y(X(d), 8 * d.length)));
             return result.toLowerCase()
-        },
-        getData: function(){
-            var self = this;
-            $('#content_descriptions1_availability1_ASPxCalendar1 > tbody > tr > td > table > tbody')
-            .each(function(){
-                var title   = $(this).find('tr').eq(1).find('span').text().toLowerCase();
-                var YYYY    = title.split(' ')[1];
-                var MM      = moment().month(title.split(' ')[0]).format("MM");
-                var getDays = function(el){
-                    el.find('tr')
-                    .eq(2)
-                    .find('td>table>tbody>tr')
-                    .not('tr:first-child')
-                    .find('td>table>tbody>tr>td')
-                    .each(function(){
-                        if($(this).closest('.dxeCalendarDay_PlasticBlue').is('.dxeCalendarOtherMonth_PlasticBlue'))
-                        return;
-                        
-                        var key = moment(YYYY+"-"+MM+"-"+$(this).text()).format('YYYY-MM-DD');
-                        if(self.inObject(key,self.data)==false)
-                        self.data[key] = {
-                            year:   YYYY,
-                            month:  MM,
-                            day:    $(this).text(),
-                            bg:     $(this).parents('table').first().css('background-image').replace('url(','').replace(')','').replace(/\"/gi, "")
-                        }
-                    });
-                };
-                getDays($(this));
-            });
-            return this.data;
-        },
-        inObject: function(term,obj){
-            if(typeof obj[term]==='object')
-                return obj[term];
-            return false;
-        },
-        base64: function (url, callback) {
-            var self    = this;
-            var url     = url.split('?')[0];
-            if(typeof self.tmp[url]!='undefined'){
-                callback(self.tmp[url]);
-            }else{
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', url);
-                xhr.responseType = 'blob';
-                xhr.send(); 
-                xhr.onload = function () {
-                    var reader = new FileReader();
-                    reader.readAsDataURL(xhr.response);
-                    reader.onloadend = function () {
-                        self.tmp[''+url] = reader.result;
-                        callback(reader.result);
-                    }
-                };
-            }
-        },
-        identify: function(imgUrl,callback){
-            var self = this;
-            this.base64(imgUrl,function(image){
-                callback(self.getKeyByCode(self.md5(image)))
-            })
-        },
-        setLegend: function(el,bg){
-            this.identify(bg,function(cssClass){
-                if(cssClass)
-                el.addClass(cssClass);
-            });
-        },
-        addClass: function(){
-            var self = this;
-            $('#content_descriptions1_availability1_ASPxCalendar1 [style*="calIcons"]')
-            .each(function(){
-                try {
-                    var bg = $(this).css('background-image').replace('url(','').replace(')','').replace(/\"/gi, "");
-                    self.setLegend($(this).find('tr td'),bg)
-                } catch (error) {
-                    console.log(error)
-                }
-            });
-            return this;
-        },
-        getKeyByCode: function(encode){
-            var legends = {
-                "744bb3be2ecd09d260b8be93b9a0ae86": 'reserve',
-                "9ca1c35177ccdc4842d525a88a14aec7": 'arrive',
-                "bf4fc138c750ddbe1c7f2c23b40e5268": 'depart',
-                "a381c9e57f6ff7052816ec489e3f4cc0": 'departArrive'
-            };
-            return legends[encode.slice(-300)];
-        }
+        };
+        return this.init();
     }
-
-    window.Calendar = Calendar;
-})( jQuery, window, document );
+    window.Calendar = Calendar
+})(jQuery,window,document);
 
 
 /*
@@ -1481,7 +1444,7 @@
 /*
 *   Blog Helper
 */
-(function($){
+(function($){"disabled",false
     /*
     *   Use this template: <nav class="pagination"> or create custom
     */
@@ -1894,7 +1857,7 @@
     $(document).on('ready',function(){
         $('[data-provide="archive"]').archive();
     });
-})(jQuery);
+;})(jQuery);
 
 
 /*
