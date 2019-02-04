@@ -244,11 +244,11 @@
 (function($){
     var Observer = function(el,opt){
         this.element      = el;
-        this._name        = "DOM Observer"
+        this._name        = "DOM Observer";
         this._description = "Base on the MutationObserver, an API made to efficiently detect loads of node operations. The MutationObserver interface provides the ability to watch for changes being made to the DOM tree. It is designed as a replacement for the older Mutation Events feature which was part of the DOM3 Events specification.";
         
         if(typeof opt=="function"){
-            opt = { after: opt }
+            opt = { after: opt };
         }
 
         this.options = $.extend({
@@ -389,6 +389,7 @@
 */
 ;(function($,window,document,undefined){
     function Calendar(){
+        var self = this;
         this.base = '#content_descriptions1_availability1_ASPxCalendar1 [style*="calIcons"]';
         this.bg = [];
         this.key = {};
@@ -399,11 +400,14 @@
             "a381c9e57f6ff7052816ec489e3f4cc0":'departArrive'
         };
 
+        $('#content_descriptions1_availability1_ASPxCalendar1_LP').parents('center').observe(function(){
+            self.init();
+        });
+        
         this.init = function(){
             var self = this;
             this.setBg();
             this.analyse(function(d){
-                console.log(self.key);
                 self.setClasses();
             });
             return this;
@@ -413,7 +417,8 @@
             var xhrs = [];
             $.each(this.bg,function(i,ii){
                 var xhr = self.base64(ii,function(data){
-                    self.key[ii] = self.legends[self.md5(data)];
+                    // using md
+                    self.key[ii] = self.legends[self.md5(data)] || 'empty';
                     xhrs.pop();
                     if(xhrs.length==0)
                     fn(self.key);
@@ -426,6 +431,7 @@
             var target = $(this.base);
             target.each(function(){
                 var klass = self.key[self.getBg($(this))];
+                $(this).find('tbody>tr>td').removeAttr('class');
                 $(this).find('tbody>tr>td').addClass(klass);
             });
         }
@@ -433,15 +439,17 @@
             var self = this;
             // get all bg
             $(this.base).each(function(){
-                self.bg.push($(this).css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'').split('?')[0]);
+                self.bg.push($(this).css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,''));
             });
             this.bg = this.arrUniq(this.bg);
         };
         this.getBg = function(el){
-            return el.css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'').split('?')[0];
+            return el.css('background-image').replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'');
         };
         this.arrUniq = function(arr){
-            return arr.filter((v, i, a) => a.indexOf(v) === i);
+            return arr.filter(function(v, i, a){
+                return a.indexOf(v) === i;
+            });
         };
         this.base64 = function (url,fn) {
             var self = this;
@@ -573,7 +581,7 @@
         };
         return this.init();
     }
-    window.Calendar = Calendar
+    window.Calendar = Calendar;
 })(jQuery,window,document);
 
 
