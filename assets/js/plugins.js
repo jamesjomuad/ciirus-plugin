@@ -589,47 +589,30 @@
 *   Bootstrap Modalize
 */
 (function(win,$){
-    class Modal
-    {
-        constructor(element,options) {
 
-            if(element instanceof jQuery){
-                this.target  = element;
-                this.id      = this.target.attr('id');
-                this.title   = this.target.is('[data-title]') ? this.target.data('title') : '&nbsp;';
-                this.content = '';
-                this.options = {
-                    title: "Title",
-                    header: true,
-                    footer: true,
-                    callback: window[this.target.data('callback')]
-                };
-                $.extend(this.options, options);
-                this.init();
-            }
-            
-            return this;
-        }
+    function Modal(element,options){
 
-        init(){
+        this.init = function(){
             var self = this;
             this.content = $(this.component());
             this.content.addClass('modalize')
             this.compose();
             setTimeout(function() {
+                if(typeof self.options.callback == "function")
                 self.options.callback();
             },500);
+            return this;
         }
 
-        events(){
+        this.events = function(){
             var close = this.content.find('[data-dismiss="modal"]')
         }
 
-        compose(){
+        this.compose = function(){
             this.target.replaceWith(this.content);
         }
 
-        header(){
+        this.header = function(){
             if(this.options.header)
             return ['<div class="modal-header">',
             '<button type="button" class="close" data-dismiss="modal" aria-label="Close">',
@@ -639,7 +622,7 @@
             '</div>'].join('')
         }
 
-        body(){
+        this.body = function(){
             return [
                 '<div class="modal-body">',
                 this.target.html(),
@@ -647,7 +630,7 @@
             ].join('')
         }
 
-        footer(){
+        this.footer = function(){
             if(this.options.footer==false)
             return '';
             
@@ -656,7 +639,7 @@
             '</div>'].join('');
         }
 
-        component(){
+        this.component = function(){
             return [
                 '<div id="'+this.id+'" class="modal fade" tabindex="-1" role="dialog">',
                 '<div class="modal-dialog" role="document">',
@@ -670,8 +653,19 @@
             ].join('');
         }
 
-        dialog(content){
-            
+        if(element instanceof jQuery){
+            this.target  = element;
+            this.id      = this.target.attr('id');
+            this.title   = this.target.is('[data-title]') ? this.target.data('title') : '&nbsp;';
+            this.content = '';
+            this.options = {
+                title: "Title",
+                header: true,
+                footer: true,
+                callback: window[this.target.data('callback')]
+            };
+            $.extend(this.options, options);
+            return this.init();
         }
     }
 
@@ -697,19 +691,9 @@
 (function(w,$){
     var localStorage = w.localStorage;
     
-    class Store{
-        constructor(){
-            var self = this;
-            if (typeof(Storage) !== "undefined") {
-                $(document).on('ready',function(){
-                    self.init();
-                });
-            } else {
-                console.log('Sorry! No Web Storage support.')
-            }
-        }
+    function Store(){
 
-        init(){
+        this.init = function(){
 
             // Triger listener to supply fields
             var self = this;
@@ -722,7 +706,7 @@
             return this;
         }
 
-        get(name){
+        this.get = function(name){
             if(!name)
             return localStorage.getItem('$') ? JSON.parse(localStorage.getItem('$')) : {};
 
@@ -730,28 +714,28 @@
             return data[name];
         }
 
-        set(k,v){
+        this.set = function(k,v){
             var data = localStorage.getItem('$') ? JSON.parse(localStorage.getItem('$')) : {};
             data[k] = v;
             w.localStorage.setItem('$', JSON.stringify(data));
             return this;
         }
 
-        getObject(key){
+        this.getObject = function(key){
             return JSON.parse(localStorage.getItem(key));
         }
 
-        setObject(key, value){
+        this.setObject = function(key, value){
             localStorage.setItem(key, JSON.stringify(value));
             return this;
         }
 
-        clear(){
+        this.clear = function(){
             localStorage.clear();
             return this;
         }
 
-        supply(field,name){
+        this.supply = function(field,name){
             var self    = this;
             var $field  = $(field);
             var data    = self.getObject('supply');
@@ -765,9 +749,20 @@
             });
             return this;
         }
+
+        var self = this;
+        if (typeof(Storage) !== "undefined") {
+            $(document).on('ready',function(){
+                self.init();
+            });
+        } else {
+            console.log('Sorry! No Web Storage support.')
+        }
+
+        return this;
     }
 
-    w.store = new Store;
+    w.store = Store;
 
     $.fn.store = function(){
         var Uid = Math.random().toString(36).substring(7);
@@ -777,27 +772,6 @@
         
         return $(this);
     }
-})(window,jQuery);
-
-
-/*
-*   Scrolly
-*   Description: smooth scroll to anchor
-*/
-(function(w,$){
-    $.fn.scrolly = function(){
-        var hash = this.hash;
-
-        if (hash !== "") {
-            event.preventDefault();
-            $('html, body').animate({
-                scrollTop: $(hash).offset().top
-            }, 800, function () {
-                window.location.hash = hash;
-            });
-        }
-    }
-
 })(window,jQuery);
 
 
@@ -1157,6 +1131,7 @@
 
 
 /*
+*   Google Translate Easy plugin
 *   Ref: https://sites.google.com/site/tomihasa/google-language-codes
 */
 (function(w,$){
@@ -1342,7 +1317,7 @@
         {
             self.wrapper = $('<div id="googleTranslator"></div>').hide();
             $("body").append(self.wrapper);
-            w.gTransInit = function(){``
+            w.gTransInit = function(){
                 new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, autoDisplay: false}, 'googleTranslator');
             }
             $.getScript('//translate.google.com/translate_a/element.js?cb=gTransInit')
@@ -1370,9 +1345,7 @@
     }
 
     self.build = function(){
-        var $htm = $(`<div class="dropdown lang-menu translation-links notranslate">
-            <button class="dropdown-toggle btn btn-default btn-sm" type="button" id="googleTranslateDrop" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true">EN<i class="icon ion-chevron-down"></i></button><ul class="dropdown-menu" aria-labelledby="googleTranslateDrop"></ul>
-        </div>`);
+        var $htm = $('<div class="dropdown lang-menu translation-links notranslate"><button class="dropdown-toggle btn btn-default btn-sm" type="button" id="googleTranslateDrop" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true">EN<i class="icon on-chevron-down"></i></button><ul class="dropdown-menu" aria-labelledby="googleTranslateDrop"></ul></div>');
         var $list = '<li><a href="#" data-lang="{{lang}}">{{label}}</a></li>';
         var $ul = $htm.find('ul');
         $ul.on('updatedList',function ( event, data ) {
@@ -1418,7 +1391,9 @@
 
     self.getCurrentLang = function(){
         var getKeyByValue = function (object, value) {
-            return Object.keys(object).find(key => object[key] === value);
+            return Object.keys(object).find(function (key) {
+                return object[key] === value;
+            });
         }
         return getKeyByValue(settings.languages,$(".goog-te-menu-value span:first").text());
     }
@@ -1434,11 +1409,7 @@
     }
 
     self.css = function(){
-        $("body").append($(`
-        <style id=`+self.helper.strRand()+`>
-            .goog-te-banner-frame.skiptranslate {display: none !important;} 
-            body {top: 0px !important;position: inherit!important;}
-        </style>`));
+        $("body").append($('<style id="g_translate'+self.helper.strRand()+'">.goog-te-banner-frame.skiptranslate {display: none !important;}body {top: 0px !important;position: inherit!important;}</style>'));
 
         return this;
     }
@@ -1460,7 +1431,7 @@
         var self    = this;
         this.el     = el;
         this.options= $.extend({
-            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(`content_Blog2`, `PBF`)"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(`content_Blog2`, `PBP`)"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(`content_Blog2`, `PBN`)"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(`content_Blog2`, `PBL`)"> <span>&raquo;</span> </a></li></ul>'
+            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(content_Blog2, PBF)"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(content_Blog2, PBP)"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(content_Blog2, PBN)"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(content_Blog2, PBL)"> <span>&raquo;</span> </a></li></ul>'
         }, opt );
 
         $('#content_Blog2_CCell').observe({
