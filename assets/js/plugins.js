@@ -284,7 +284,7 @@
     }
 
     $.fn.observe = function(options){
-        if(!$(this).length)
+        if(!$(this).length || typeof MutationObserver != 'undefined')
         return;
         var observe = new Observer($(this) ,options);
 		$(this).data('observe', observe);
@@ -1423,7 +1423,7 @@
 /*
 *   Blog Helper
 */
-(function($){"disabled",false
+(function($){
     /*
     *   Use this template: <nav class="pagination"> or create custom
     */
@@ -1664,11 +1664,11 @@
             this.create();
             this.target.remove();
     
-            $('#content_ASPxTreeList1_U').on('DOMSubtreeModified',function(){
+            $('#content_ASPxTreeList1_U').on('DOMSubtreeModified propertychange',function(){
                 /* prevents multiple call */
                 tmp.push($(this).find('tbody').length);
                 var l = tmp.length;
-                if(tmp[l-1]==1 && tmp[l-2]==0){
+                if(tmp[l-1]==1 && tmp[l-2]==0 || l==10){
                     tmp = [];
                     self.update();
                 }
@@ -1836,7 +1836,7 @@
     $(document).on('ready',function(){
         $('[data-provide="archive"]').archive();
     });
-;})(jQuery);
+})(jQuery);
 
 
 /*
