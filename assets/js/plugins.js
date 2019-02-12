@@ -1431,7 +1431,7 @@
         var self    = this;
         this.el     = el;
         this.options= $.extend({
-            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(content_Blog2, PBF)"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(content_Blog2, PBP)"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(content_Blog2, PBN)"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(content_Blog2, PBL)"> <span>&raquo;</span> </a></li></ul>'
+            paginationTemplate: '<ul class="pagination"><li> <a href="#" class="first" onclick="aspxDVPagerClick(\'content_Blog2\', \'PBF\')"> <span>&laquo;</span> </a></li><li> <a href="#" class="prev" onclick="aspxDVPagerClick(\'content_Blog2\', \'PBP\')"> <span>&lt;</span> </a></li><li> <span class="label label-info">Page 2 of 3</span></li><li> <a href="#" class="next" onclick="aspxDVPagerClick(\'content_Blog2\', \'PBN\')"> <span>&gt;</span> </a></li><li> <a href="#" class="last" onclick="aspxDVPagerClick(\'content_Blog2\', \'PBL\')"> <span>&raquo;</span> </a></li></ul>'
         }, opt );
 
         $('#content_Blog2_CCell').observe({
