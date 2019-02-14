@@ -284,7 +284,7 @@
     }
 
     $.fn.observe = function(options){
-        if(!$(this).length || typeof MutationObserver != 'undefined')
+        if(!$(this).length || typeof MutationObserver == 'undefined')
         return;
         var observe = new Observer($(this) ,options);
 		$(this).data('observe', observe);
