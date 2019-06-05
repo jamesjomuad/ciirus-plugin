@@ -1,5 +1,5 @@
 /*
-*  v4.0
+*  v3.5
 *  Description: Ciirus tools and utilities.
 *  Tags: Quote, Calendar, Blog, Review, Paginations, Newsletter, Field store and etc
 */
@@ -7,7 +7,55 @@
     "use strict";
     var Properties;
 
-    w.params = [ "ad", "aircon", "aircon", "bathrooms", "bbq", "bedrooms", "cg", "clubhouse", "cv", "cwprov", "dd", "dock", "efp", "fc", "fireplace", "fishing", "gameroom", "garageax", "gasfree", "gc", "golf", "internet", "kitchen", "laundry", "lid", "linprov", "nearb", "nearb", "NearThemeParks", "nfp", "orderbyprice", "pets", "pf", "pool", "PoolHeat", "propertytype", "SeaOceanView", "sfp", "sleeps", "smoking", "spa", "starrating", "tenniscourts", "wc", "wfp", "wifi", "wv" ];
+    w.params = [
+        "ad",
+        "aircon",
+        "aircon",
+        "bathrooms",
+        "bbq",
+        "bedrooms",
+        "cg",
+        "clubhouse",
+        "cv",
+        "cwprov",
+        "dd",
+        "dock",
+        "efp",
+        "fc",
+        "fireplace",
+        "fishing",
+        "gameroom",
+        "garageax",
+        "gasfree",
+        "gc",
+        "golf",
+        "internet",
+        "kitchen",
+        "laundry",
+        "lid",
+        "linprov",
+        "nearb",
+        "nearb",
+        "NearThemeParks",
+        "nfp",
+        "orderbyprice",
+        "pets",
+        "pf",
+        "pool",
+        "PoolHeat",
+        "propertytype",
+        "SeaOceanView",
+        "sfp",
+        "sleeps",
+        "smoking",
+        "spa",
+        "starrating",
+        "tenniscourts",
+        "wc",
+        "wfp",
+        "wifi",
+        "wv"
+    ];
 
     w.getUrlParam = function(name){
         var url = new URL(w.location.href);
@@ -24,6 +72,20 @@
     w.isPage = function(page){
         return (window.location.href.indexOf(page) > -1);
     }
+
+    w.getProperties = (function(){
+        Properties = null;
+        var getProperties = function(){
+            $.get('/JumpToProperty16001.aspx')
+            .then(function(res){
+                var start   = res.indexOf("= [ {")+1;
+                var end     = res.indexOf("}];")+2;
+                Properties  = eval(res.substring(start,end));
+            });
+            return Properties;
+        }; getProperties();
+        return getProperties;
+    })()
 
     $.wait = function( callback, seconds){
         return window.setTimeout( callback, seconds * 1000 );
@@ -1781,13 +1843,13 @@
 *   Contact Form
 *   Description: A contact form plugin that is usable anywhere in the page
 *   Initilization: 
-*        by data: <div data-provide="cf"></div>
-*        by function: $('#contact').contactForm();
+        by data: <div data-provide="cf"></div>
+        by function: $('#contact').contactForm();
 *   Options:
-*        debug: false,
-*        redirect: true,
-*        beforeSubmit: function(data)
-*        afterSubmit: function(url)
+        debug: false,
+        redirect: true,
+        beforeSubmit: function(data)
+        afterSubmit: function(url)
 */
 (function(w,$){
 
@@ -2044,79 +2106,6 @@
 })(window,jQuery);
 
 
-
-/*
-*   Jump to Property
-*
-*/
-(function($){
-    if(typeof $.wait=='undefined'){
-        $.wait = function( callback, seconds){
-            return window.setTimeout( callback, seconds * 1000 );
-        }
-    }
-
-    $.fn.propFinder = function(options){
-		var self = $(this);
-        var finder = {
-            template: [
-                '<div class="input-group">',
-                '<input type="text" class="form-control input-sm" placeholder="Jump to Properties" autocomplete="off">',
-                '<span class="input-group-btn">',
-                '<button class="btn btn-default btn-sm" type="button">GO</button>',
-                '</span>',
-                '</div>'
-            ],
-            getProperties: (function(){
-                Properties = null;
-                var getProperties = function(){
-                    $.get('/JumpToProperty16001.aspx')
-                    .then(function(res){
-                        var start   = res.indexOf("= [ {")+1;
-                        var end     = res.indexOf("}];")+2;
-                        Properties  = eval(res.substring(start,end));
-                    });
-                    return Properties;
-                }; getProperties();
-                return getProperties;
-            })()
-        };
-
-        finder.init = function(){
-            var $wrap = self.append(finder.template.join(''));
-            var $input = $wrap.find('input');
-            var $btn = $wrap.find('button');
-
-            $input.autocomplete({
-                source: finder.getProperties(),
-                position:{collision:"fit flip"}
-			});
-			$input.on("autocompleteselect", function(event,ui){
-				$(this).data('value',ui.item.value)
-				this.value=ui.item.label;
-				return false;
-			});
-			$input.on('click',function(){
-				$(this).autocomplete( "search", " " );
-			});
-			$btn.on('click',function(){
-				if($input.data("value")){
-					var url = "/details.aspx?PropertyID="+$input.data("value");
-					window.location.href = url;
-				}
-			});
-        };
-
-        $.wait(function(){
-            finder.init();
-        },2)
-
-        return this;
-    };
-
-})(jQuery)
-
-
 /*
 *   Add Support for token:[websiteuserid] that is not rendered on the backend
 */
@@ -2128,78 +2117,3 @@ $(function(){
         $(this).attr('href',href);
     });
 });
-
-
-/*
-*   Jump to Property
-*
-*/
-(function($){
-    if(typeof $.wait=='undefined'){
-        $.wait = function( callback, seconds){
-            return window.setTimeout( callback, seconds * 1000 );
-        }
-    }
-
-    $.fn.pfinder = function(options){
-		var self = $(this);
-        var finder = {
-            template: [
-                '<div class="input-group">',
-                '<input type="text" class="form-control input-sm" placeholder="Jump to Properties" autocomplete="off">',
-                '<span class="input-group-btn">',
-                '<button class="btn btn-default btn-sm" type="button">GO</button>',
-                '</span>',
-                '</div>'
-            ],
-            getProperties: (function(){
-                Properties = null;
-                var getProperties = function(){
-                    $.get('/JumpToProperty16001.aspx')
-                    .then(function(res){
-                        var start   = res.indexOf("= [ {")+1;
-                        var end     = res.indexOf("}];")+2;
-                        Properties  = eval(res.substring(start,end));
-                    });
-                    return Properties;
-                }; getProperties();
-                return getProperties;
-            })()
-        };
-
-        finder.init = function(){
-            var $wrap = self.append(finder.template.join(''));
-            var $input = $wrap.find('input');
-            var $btn = $wrap.find('button');
-
-            $input.autocomplete({
-                source: finder.getProperties(),
-                position:{collision:"fit flip"}
-			});
-			$input.on("autocompleteselect", function(event,ui){
-				$(this).data('value',ui.item.value)
-				this.value=ui.item.label;
-				return false;
-			});
-			$input.on('click',function(){
-				$(this).autocomplete( "search", " " );
-			});
-			$btn.on('click',function(){
-				if($input.data("value")){
-					var url = "/details.aspx?PropertyID="+$input.data("value");
-					window.location.href = url;
-				}
-			});
-        };
-
-        $.wait(function(){
-            finder.init();
-        },2)
-
-        return this;
-    };
-
-	$(document).ready(function(){
-		$('[data-provide="pfinder"]').pfinder();
-	});
-})(jQuery);
