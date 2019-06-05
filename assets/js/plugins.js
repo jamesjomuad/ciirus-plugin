@@ -29,6 +29,10 @@
         return window.setTimeout( callback, seconds * 1000 );
     }
 
+    $.getParam = function(name){
+        return (location.search.split(name + '=')[1] || '').split('&')[0];
+    }
+
     return w;
 })(window,jQuery);
 
@@ -805,8 +809,7 @@
         };
 
         this.getPropertyID = function(){
-            var url = new URL(w.location.href.toLocaleLowerCase());
-            return url.searchParams.get("propertyid");
+            return $.getParam("propertyid");
         };
 
         this.formatDate = function(dmy){
