@@ -1,5 +1,5 @@
 /*
-*  v4.0
+*  v4.5
 *  Description: Ciirus tools and utilities.
 *  Tags: Quote, Calendar, Blog, Review, Paginations, Newsletter, Field store and etc
 */
@@ -31,9 +31,56 @@
 
     $.getParam = function(name){
         return (location.search.split(name + '=')[1] || '').split('&')[0];
+    };
+
+    $.urlJson = function(url){
+        var Url = (typeof url=='undefined') ? location.search.substring(1) : url;
+        if(Url[0]=='&'){
+            Url = Url.substring(1);
+        }
+
+        return JSON.parse('{"' + Url.replace(/&/g, '","').replace(/=/g,'":"') + '"}', function(key, value) { 
+            return key===""?value:decodeURIComponent(value) 
+        });
     }
 
     return w;
+})(window,jQuery);
+
+
+/*
+*   Browser Detect
+*/
+(function(win,$){
+    if(typeof $.browser != "undefined"){
+        return;
+    }
+
+    $.browser = function(){
+        var browser;
+        var chrome   = navigator.userAgent.indexOf('Chrome') > -1;
+        var ie       = navigator.userAgent.indexOf('MSIE') > -1;
+        var firefox  = navigator.userAgent.indexOf('Firefox') > -1;
+        var safari   = navigator.userAgent.indexOf("Safari") > -1;
+        var opera    = navigator.userAgent.toLowerCase().indexOf("op") > -1;
+
+        if(chrome){
+            browser = 'chrome';
+        }else if(ie){
+            browser = 'ie'
+        }else if(firefox){
+            browser = 'firefox'
+        }else if(safari){
+            browser = 'safari'
+        }else if(opera){
+            browser = 'opera'
+        }
+        return browser;
+    };
+
+    $(function(){
+        $('html').addClass($.browser());
+    });
 })(window,jQuery);
 
 
@@ -769,8 +816,8 @@
             var remote = $.get(quoteUrl + decodedURL);
 
             remote.done(function(res){
-                var error1   = $(res).find('[color="Red"]');
-                var error2  = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
+                var error1 = $(res).find('[color="Red"]');
+                var error2 = $(res).find('.ratesControlQuoteResponse.hasQuotingError');
                 if(error1.length){
                     self.trigger("error", error1.text());
                 }else if(error2.length){
@@ -809,7 +856,7 @@
         };
 
         this.getPropertyID = function(){
-            return $.getParam("propertyid");
+            return $.getParam("PropertyID") || $.getParam("propertyid");
         };
 
         this.formatDate = function(dmy){
@@ -858,11 +905,19 @@
 
 
 /* 
-*   Review 
-*   Review Function @Property Details
-*   Must set a repeating html template with classes
-*   Required classes: name, content, date, rating
-*   Optional class: alias
+    Review 
+    Review Function @Property Details
+    Must set a repeating html template with classes
+    Required classes: name, content, date, rating
+    Optional class: alias
+    Events: 
+        review:empty, 
+        review:load, 
+        review:before, 
+        review:after, 
+        review:render; param: item
+    Example:
+        $(target/template).on('review:load',function(){})
 */
 (function($){
     function ReviewPager(el,options){
@@ -947,7 +1002,7 @@
         return this.init();
     }
 
-    function Review(el,opt){
+    function Review(el,options){
         this.element      = el;
         this.contents     = [];
         this.$items       = "#content_descriptions1_GuestReviews1_Reviews_ICell .dxdvItem_DevEx";
@@ -959,13 +1014,13 @@
             beforeLoad: function(){},
             afterLoad: function(){},
             onEachRender: function(el,data){}
-        }, opt );
+        }, options );
 
         this.init = function(){
             var self = this;
 
             if(this.element){
-                this.wrap = $('<div>',{id:('review_'+this.hash()+this.hash().toLowerCase())})
+                this.wrap = $('<div>',{id:('review_'+this.hash()+this.hash().toLowerCase()),class:'comments'})
                 .insertBefore(this.element)
                 .append(this.element);
                 if(!this.isEmpty()){
@@ -974,6 +1029,8 @@
                     var msg = $('#content_descriptions1_GuestReviews1_Reviews_CCell .dxdvEmptyData_DevEx').text();
                     var info = $('<div>').addClass("well text-info text-center").html($('<b>').text(msg));
                     this.element.html(info);
+                    this.element.show();
+                    self.element.trigger('review:empty');
                 }
             }
 
@@ -981,11 +1038,14 @@
             $('#content_descriptions1_GuestReviews1_Reviews_CCell').observe({
                 before:function(){
                     self.options.beforeLoad();
+                    self.element.trigger('review:load');
+                    self.element.trigger('review:before');
                 },
                 after:function(){
-                    // Refreshes pagination when new content is loaded
                     self.build();
                     self.options.afterLoad();
+                    self.element.trigger('review:load');
+                    self.element.trigger('review:after');
                 }
             });
 
@@ -1036,8 +1096,10 @@
                 clone.find('.alias').text(v.name[0]);
                 clone.show();
                 clone.removeAttr('style');
+                clone.removeAttr('data-provide');
                 clone.insertAfter(template);
                 self.options.onEachRender(clone,v);
+                self.element.trigger('review:render',clone);
             });
             this.element.hide();
             return this;
@@ -1054,36 +1116,188 @@
         return this.init();
     }
 
-    $.fn.reviewPager = function (options) {
+    function ReviewForm(el,options){
+        this.element = $(el);
+        this.$name = null;
+        this.$email = null;
+        this.$rates = null;
+        this.$anonymous = null;
+        this.$message = null;
+        this.$submit = null;
+        this.$notify = null;
+        this.template = [
+            '<section class="row">',
+            '<div class="form-group col-md-12">',
+            '<input class="form-control error" name="name" placeholder="Name*">',
+            '</div>',
+            '<div class="form-group col-md-12">',
+            '<input class="form-control" name="email" placeholder="Email*"> </div>',
+            '<div class="form-group col-md-12">',
+            '<h5>Your Rating</h5>',
+            '<ul><li><a class="rate" href="javascript:" data-index="0"><i aria-hidden="true" class="fa fa-star-o"></i></a></li>',
+            '<li><a class="rate" href="javascript:" data-index="1"><i aria-hidden="true" class="fa fa-star-o"></i></a></li>',
+            '<li><a class="rate" href="javascript:" data-index="2"><i aria-hidden="true" class="fa fa-star-o"></i></a></li>',
+            '<li><a class="rate" href="javascript:" data-index="3"><i aria-hidden="true" class="fa fa-star-o"></i></a></li>',
+            '<li><a class="rate" href="javascript:" data-index="4"><i aria-hidden="true" class="fa fa-star-o"></i></a></li></ul>',
+            '<textarea class="form-control" rows="1" name="message" placeholder="review">review</textarea>',
+            '</div>',
+            '<div class="form-group col-md-12"><label>Show your name</label><input name="anonymous" type="checkbox" autocomplete="off"></div>',
+            '<div class="form-group col-md-12"><button type="button" class="btn form-control">submit now</button></div>',
+            '<div class="notify" style="display: none;"></div>',
+            '</section>'
+        ].join('');
+
+        this.init = function(){
+            var $template = $(this.template);
+            this.element.append($template);
+            this.$name = $template.find('[name=name]');
+            this.$email = $template.find('[name=email]');
+            this.$rates = $template.find('a.rate');
+            this.$anonymous = $template.find('[name=anonymous]');
+            this.$message = $template.find('[name="message"]');
+            this.$submit = $template.find('[type="button"]');
+            this.$notify = $template.find('.notify');
+
+            this.element.attr('id','review_form_'+this.hash());
+
+            this.listener();
+
+            /* Show message when review is submitted */
+            if($('#content_descriptions1_GuestReviews1_AddNewReview .bodyText').is('p')){
+                $template.find('.form-group').hide();
+                this.$notify.text($('#content_descriptions1_GuestReviews1_AddNewReview .bodyText').text()).fadeIn();
+            }else{
+                this.$notify.hide()
+            }
+
+            return this;
+        }
+
+        this.listener = function(){
+            var self = this;
+            this.$rates.on('click',function(){
+                var li = $(this).parents('ul').find('li');
+                var n = $(this).data('index');
+                var stars = [];
+                li.find('a').removeClass('active');
+                li.find('i').removeClass('fa-star').addClass('fa-star-o');
+                li.each(function(x){
+                    if(x>n)
+                        return false;
+                    else
+                        stars.push($(this)[0])
+                })
+                $(stars).each(function(){
+                    $(this).find('a').addClass('active');
+                    $(this).find('i').addClass('fa-star').removeClass('fa-star-o');
+                });
+                aspxRatingControlVote('content_descriptions1_GuestReviews1_txtStarRating',n);
+            });
+
+            this.$name.on('change',function(){
+                $('[name*="txtGuestName"]').val($(this).val())
+            });
+
+            this.$email.on('change',function(){
+                $('[name*="txtGuestEmail"]').val($(this).val())
+            });
+
+            this.$message.on('change',function(){
+                $('[name*="txtReview"]').val($(this).val())
+            });
+
+            this.$anonymous.on('change',function(){
+                if($(this).is(':checked')){
+                    $('[name*="ckShowGuestName"]').val('C')
+                }else{
+                    $('[name*="ckShowGuestName"]').val('I')
+                }
+            });
+
+            this.$submit.one('click',function(){
+                if(self.validate()){
+                    $('#content_descriptions1_GuestReviews1_btnSubmitReview_CD').click();
+                }
+            });
+
+            return this;
+        }
+
+        this.hash = function(){
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for (var i = 0; i < 8; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+            return text;
+        };
+
+        this.validate = function(){
+            var valid = true;
+            if(!this.$name.val()){
+                this.$name.css('border','1px solid red')
+                valid = false;
+            }
+            if(!this.$email.val()){
+                this.$email.css('border','1px solid red')
+                valid = false;
+            }
+            if(!this.$message.val()){
+                this.$message.css('border','1px solid red')
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        return this.init();
+    }
+
+    $.fn.reviewPager = function(options){
 		return new ReviewPager($(this) ,options);
     };
 
-    $.fn.review = function (options) {
+    $.fn.review = function(options){
         var review = new Review($(this) ,options);
         review.wrap.data('review',review);
 		return review;
     };
-    
+
+    $.fn.reviewForm = function(options){
+        var rf = new ReviewForm(this ,options);
+        $(this).data('reviewForm',rf);
+		return rf;
+    }
+
     $(document).ready(function(){
         $('[data-provide="review-pager"]').reviewPager();
+        $('[data-provide="review-form"]').reviewForm();
         $('[data-provide="review"]').review();
     });
 })(jQuery);
 
 
+
 /*
 *   Google Translate Easy plugin
 *   Ref: https://sites.google.com/site/tomihasa/google-language-codes
+*   Usage:
+*       <div id="gTanslate" data-provide="gTranslate"></div>
+*       $('#gTanslate').gTranslate();
 */
-(function(w,$){
+(function(win,$){
     "use strict";
-    var self,settings;
 
-    self = function(options){
-        settings = $.extend({
-            // default options.
+    function gTranslate(el,options){
+        this.target = el;
+
+        this.options = $.extend({
+            id: 'googleTranslate',
+            class: null,
+            showFlag: true,
+            codeLabel: true,
+            listTemplate: '<li><a href="#" data-lang="{{lang}}">{{label}}</a></li>',
             default:'en',
-            lang: ['en','fr','de','es','pt-BR','zh-CN','no','da','sv'],
+            lang: ['en','fr','de','es','pt-PT','zh-CN','no','da','sv'],
             languages: {
                 'af': 'Afrikaans',
                 'ak': 'Akan',
@@ -1104,7 +1318,7 @@
                 'ca': 'Catalan',
                 'chr': 'Cherokee',
                 'ny': 'Chichewa',
-                'zh-CN': 'Chinese',
+                'zh-CN': 'Chinese', /* (Simplified) */
                 // 'zh-TW': 'Chinese (Traditional)',
                 'co': 'Corsican',
                 'hr': 'Croatian',
@@ -1231,134 +1445,157 @@
             }
         }, options );
 
-        self.init();
-        $(this).after(self.build());
-        $(this).remove();
-        self.events();
-        self.css();
-        return self;
-    };
+        this.wrapper = $('<div class="dropdown lang-menu translation-links notranslate"><button class="dropdown-toggle btn btn-default btn-sm" type="button" id="googleTranslateDrop" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true">EN<i class="icon on-chevron-down"></i></button><ul class="dropdown-menu" aria-labelledby="googleTranslateDrop"></ul></div>');
 
-    self.helper = {
-        strRand: function(){
-            return Math.random().toString(30).substring(7);
-        },
-        toTitleCase: function(str) {
-            var lcStr = str.toLowerCase();
-            return lcStr.replace(/(?:^|\s)\w/g, function(match) {
-                return match.toUpperCase();
-            });
-        }
-    };
-
-    self.init = function(){
-        if($('iframe.goog-te-menu-frame').length)
-            console.log('Google translator already loaded!')
-        else
-        {
-            self.wrapper = $('<div id="googleTranslator"></div>').hide();
-            $("body").append(self.wrapper);
-            w.gTransInit = function(){
-                new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, autoDisplay: false}, 'googleTranslator');
+        this.helper = {
+            strRand: function(){
+                return Math.random().toString(30).substring(7);
+            },
+            toTitleCase: function(str) {
+                var lcStr = str.toLowerCase();
+                return lcStr.replace(/(?:^|\s)\w/g, function(match) {
+                    return match.toUpperCase();
+                });
             }
-            $.getScript('//translate.google.com/translate_a/element.js?cb=gTransInit')
         }
 
-        $(window).load(function() {
-            setTimeout(function() {
-                self.updateLabel()
-            }, 2000);
-        });
+        this.build = function(){
+            var self = this;
+            var $ul = self.wrapper.find('ul');
+            $ul.on('updatedList',function ( event, data ) {
+                var list = $.map( data, function ( v ) {
+                    return self.options.listTemplate.replace( /{{label}}/, v.label ).replace( /{{lang}}/, v.lang );
+                });
+                $ul.html(list);
+            })
+            $ul.trigger( "updatedList", [self.getLang()]);
+            return self.wrapper;
+        };
 
-        return this
+        this.setLang = function(lang){
+            var self = this;
+            var settings = this.options;
+            lang = settings.languages[lang];
+            var n = $(".goog-te-menu-frame:first");
+            var el = n.contents().find(".goog-te-menu2-item span.text:contains(" + lang + ")").get(0);
+            if(typeof el !="undefined"){
+                setTimeout(function(){self.setActive()},800);
+                return n.length ? (el.click(), !1) : (alert("Error: Could not find Google translate frame."), !1);
+            }else{
+                console.log('Language not found!')
+            }
+        };
+
+        this.getLang = function(){
+            var settings = this.options;
+            var Lang = null;
+            if(settings.lang.constructor===Array)
+                Lang = $.map(settings.lang,function(v){
+                    return {
+                        lang:v,
+                        label:settings.languages[v]
+                    };
+                })
+            else if(settings.lang.constructor===Object)
+                Lang = $.map(settings.lang,function(v,k){
+                    return {
+                        lang: k,
+                        label: v
+                    };
+                })
+            return Lang;
+        };
+
+        this.getCurrentLang = function(){
+            var settings = this.options;
+            var getKeyByValue = function (object, value) {
+                return Object.keys(object).find(function (key) {return object[key] === value;});
+                // .find(key => object[key] === value);
+            }
+            var label = getKeyByValue(settings.languages,$(".goog-te-menu-value span:first").text())
+
+            return label || console.log($(".goog-te-menu-value span:first").text() + ' Not found');
+        }
+
+        this.setActive = function(){
+            var settings = this.options;
+            var lang = this.getCurrentLang();
+            var label = (settings.codeLabel) ? lang.toUpperCase() : settings.languages[lang];
+            var $btn = this.wrapper.find(".dropdown-toggle");
+
+            if($(".goog-te-menu-value span:first").text()=="Select Language")
+            return false;
+            
+            $btn.contents().first()[0].textContent = label;
+            $btn.attr('data-lang',lang);
+            this.wrapper.find('ul li').removeClass('active');
+            this.wrapper.find( "a:contains('"+label+"')" ).parents('li').addClass('active');
+
+            return this;
+        }
+
+        this.initGoogle = function(){
+            if($('iframe.goog-te-menu-frame').length){
+                console.log('Google translator already loaded!');
+            }
+            else
+            {
+                $("body").append($('<div id="googleTranslator"></div>').hide());
+                win.googleInit = function(){
+                    new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, autoDisplay: false}, 'googleTranslator');
+                }
+                return $.getScript('//translate.google.com/translate_a/element.js?cb=googleInit');
+            }
+        };
+
+        this.css = function(){
+            $("body").append($("<style id="+this.helper.strRand()+">.goog-te-banner-frame.skiptranslate {display: none !important;}body {top: 0px !important;position: inherit!important;}</style>"));
+            return this;
+        };
+
+        this.init = function(){
+            var self = this;
+
+            this.initGoogle();
+
+            this.target.html(this.build());
+
+            this.css();
+
+            this.wrapper.find('a').click(function (){
+                var lang = $(this).data('lang');
+                self.setLang(lang);
+            });
+
+            $(window).on('load',function() {
+                setTimeout(function() {
+                    self.setActive()
+                }, 800);
+            });
+
+            return this;
+        };
+
+        return this.init();
     };
 
-    self.events = function(){
-        $(".translation-links a").click(function (){
-            // var lang = $(this).data("lang");
-            var lang = $(this).text();
-            var n = $(".goog-te-menu-frame:first");
-            setTimeout(function() {
-                self.updateLabel()
-            }, 800);
-            return n.length ? (n.contents().find(".goog-te-menu2-item span.text:contains(" + lang + ")").get(0).click(), !1) : (alert("Error: Could not find Google translate frame."), !1)
-        });
-    }
-
-    self.build = function(){
-        var $htm = $('<div class="dropdown lang-menu translation-links notranslate"><button class="dropdown-toggle btn btn-default btn-sm" type="button" id="googleTranslateDrop" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true">EN<i class="icon on-chevron-down"></i></button><ul class="dropdown-menu" aria-labelledby="googleTranslateDrop"></ul></div>');
-        var $list = '<li><a href="#" data-lang="{{lang}}">{{label}}</a></li>';
-        var $ul = $htm.find('ul');
-        $ul.on('updatedList',function ( event, data ) {
-            var list = $.map( data, function ( v ) {
-                return $list.replace( /{{label}}/, v.label ).replace( /{{lang}}/, v.lang );
-            });
-            $ul.html(list);
-        })
-        $ul.trigger( "updatedList", [self.getLang()]);
-        this.plugin = $htm;
-        return $htm;
-    }
-
-    self.getLang = function(){
-        var Lang = null;
-        if(settings.lang.constructor===Array)
-            Lang = $.map(settings.lang,function(v){
-                return {
-                    lang:v,
-                    label:settings.languages[v]
-                };
-            })
-        else if(settings.lang.constructor===Object)
-            Lang = $.map(settings.lang,function(v,k){
-                return {
-                    lang: settings.languages[k],
-                    label: v
-                };
-            })
-        return Lang;
-    }
-
-    self.setLang = function(lang){
-        lang = lang.toLowerCase();
-        lang = settings.languages[lang];
-        var n = $(".goog-te-menu-frame:first");
-        var el = n.contents().find(".goog-te-menu2-item span.text:contains(" + lang + ")").get(0);
-        if(typeof el !="undefined"){
-            return n.length ? (el.click(), !1) : (alert("Error: Could not find Google translate frame."), !1);
+    $.fn.gTranslate = function(options){
+        if($(this).length==0){
+            return this;
         }
-        console.log('Language not found!')
-    }
 
-    self.getCurrentLang = function(){
-        var getKeyByValue = function (object, value) {
-            return Object.keys(object).find(function (key) {
-                return object[key] === value;
-            });
-        }
-        return getKeyByValue(settings.languages,$(".goog-te-menu-value span:first").text());
-    }
-
-    self.updateLabel = function(){
-        if($(".goog-te-menu-value span:first").text()=="Select Language")
-        return false;
+        var plugin = new gTranslate(this,options);
         
-        var label = settings.languages[self.getCurrentLang()];
-        this.plugin.find(".dropdown-toggle").contents().first()[0].textContent = label;
-        this.plugin.find('ul li').removeClass('active');
-        this.plugin.find( "a:contains('"+label+"')" ).parents('li').addClass('active');
-    }
+        $(this).data('gTranslate', plugin);
 
-    self.css = function(){
-        $("body").append($('<style id="g_translate'+self.helper.strRand()+'">.goog-te-banner-frame.skiptranslate {display: none !important;}body {top: 0px !important;position: inherit!important;}</style>'));
+		return plugin;
+    };
 
-        return this;
-    }
-
-    $.fn.googleTranslate = self;
-
-    return this;
+    $(document).on('ready',function(){
+        $('[data-provide="gTranslate"]').gTranslate();
+    });
 })(window,jQuery);
+
 
 
 /*
@@ -1792,6 +2029,7 @@
 *        beforeSubmit: function(data)
 *        afterSubmit: function(url)
 */
+
 (function(w,$){
 
     function remote(boolRedirect){
@@ -1803,15 +2041,19 @@
         if(onPage('contactus.aspx')){
             this.iframe = $('body').contents();
         }else{
-            this.iframe = $('<iframe/>',{src: this.formUrl}).hide();
-            this.iframe.on("load", function() {
-                self.url = self.iframe.contents().get(0).location.href;
-                if(boolRedirect)
-                if(self.url.indexOf('/userpage.aspx')>0){
-                    window.location.href = self.url;
-                }
-            });
-            $('body').append(this.iframe);
+            if($('iframe[src="'+this.formUrl+'"]').length>0){
+                this.iframe = $('iframe[src="'+this.formUrl+'"]');
+            }else{
+                this.iframe = $('<iframe/>',{src: this.formUrl}).hide();
+                this.iframe.on("load", function() {
+                    self.url = self.iframe.contents().get(0).location.href;
+                    if(boolRedirect)
+                    if(self.url.indexOf('/userpage.aspx')>0){
+                        window.location.href = self.url;
+                    }
+                });
+                $('body').append(this.iframe);
+            }
         }
 
         this.el = function(target){
@@ -1835,12 +2077,15 @@
 
             return new Promise(function(resolve, reject) {
                 self.iframe.on("load", function() {
-                    if (self.url.indexOf('/userpage.aspx')>0) {
-                        resolve(self.url);
+                    if(self.iframe.contents().find('body:contains("Thank you for your")').length){
+                        resolve('Thank you for your enquiry. We will get back to you very soon.');
                     }
-                    else {
-                        reject(Error("It broke"));
-                    }
+                    // if (self.url.indexOf(self.formUrl)>0) {
+                    //     resolve(self.url);
+                    // }
+                    // else {
+                    //     reject(Error("It broke"));
+                    // }
                 });
             });
         };
@@ -1870,7 +2115,7 @@
             }
 
             this.$$('button').on('click',function(){
-                self.onSubmit();
+                self.setData();
             });
 
             this.debug();
@@ -1885,7 +2130,7 @@
             this.remote.iframe.contents().find('*').show();
         };
 
-        this.onSubmit = function(){
+        this.setData = function(){
             var self = this;
             self.data = {
                 name    : self.$$('#name, .name, [name="name"]').val(),
@@ -1980,15 +2225,17 @@
         };
 
         this.send = function(){
+            var self = this;
             this.settings.beforeSubmit(this.data);
-
+            this.element.trigger("before",[this.data]);
             if(this.validate()){
                 this.$$('input,button,textarea').prop('disabled',true);
-                this.remote
+                self.remote
                 .data(this.data)
                 .send()
                 .then(function(res){
-                    this.settings.afterSubmit(res);
+                    self.element.trigger("after",[res]);
+                    self.settings.afterSubmit(res);
                 });
             }
         };
@@ -2034,7 +2281,6 @@
             }
         }
         
-
         var cf = new contactForm($(this),options);
         $(this).data('contactForm',cf);
         return $(this);
@@ -2123,11 +2369,11 @@
 /*
 *   Add Support for token:[websiteuserid] that is not rendered on the backend
 */
-$(function(){
+$(window).on('load',function(){
     var id = $('[src*="WebTemplates"]').eq(0).attr('src').split('/')[2];
 
-    $('[href*="[websiteuserid]"]').each(function(){
-        var href = $(this).attr('href').replace('[websiteuserid]',id);
+    $('[href*="[websiteuserid]"],[data-href*="[websiteuserid]"]').each(function(){
+        var href = $(this).attr('href') ? $(this).attr('href').replace('[websiteuserid]',id) : $(this).attr('data-href').replace('[websiteuserid]',id);
         $(this).attr('href',href);
     });
 });
